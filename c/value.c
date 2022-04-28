@@ -3,7 +3,7 @@
 #include "shared.h"
 #include "value.h"
 #include "ast.h"
-#include "env.h"
+#include "environment.h"
 
 void dump_value(FILE *out, value v) {
 	fprintf(out, "<value:%08llx>", v);
@@ -25,8 +25,8 @@ value new_function(char *name, int argc, char **argv, ast_block *block) {
 	return (value) f | 1;
 }
 
-value run_block(ast_block *, value *, env *);
-value call_value(value v, int argc, value *argv, env *e) {
+value run_block(ast_block *, value *, environment *);
+value call_value(value v, int argc, value *argv, environment *e) {
 	if (classify(v) != V_FUNC)
 		die("cannot call invalid value: %llx", v);
 
@@ -34,12 +34,12 @@ value call_value(value v, int argc, value *argv, env *e) {
 	if (f->argc != argc)
 		die("argument mismatch for %s: expected %d, got %d", f->name, f->argc, argc);
 
-	++e->sp;
+	enter_stackframe(e);
 	for (int i = 0; i < argc; ++i)
 		assign_var(e, f->argv[i], argv[i]);
 	value ret;
 	run_block(f->block, &ret, e);
-	--e->sp;
+	leave_stackframe(e);
 	return ret;
 }
 

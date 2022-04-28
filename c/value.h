@@ -24,6 +24,9 @@ typedef struct {
 #define VTRUE 2
 #define VUNDEF 3
 
+static inline void free_value(value val) { return; }
+static inline value clone_value(value val) { return val; }
+
 static inline value ary2value(array *a) {
 	return (value) a | 2;
 }
@@ -73,6 +76,6 @@ struct ast_block;
 value new_function(char *name, int argc, char **argv, struct ast_block *block);
 void index_assign(value ary, value idx, value val);
 value index_into(value ary, value idx);
-struct _env;
-value call_value(value v, int argc, value *argv, struct _env *e);
+struct _environment;
+value call_value(value v, int argc, value *argv, struct _environment *e);
 

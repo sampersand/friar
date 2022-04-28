@@ -220,6 +220,6 @@ void dump_token(FILE *out, token tkn) {
 	case TK_GEQ: fprintf(out, "Token(>=)\n"); break;
 	case TK_EQL: fprintf(out, "Token(==)\n"); break;
 	case TK_NEQ: fprintf(out, "Token(!=)\n"); break;
-	default: fprintf(out, "Token(<?>)\n"); break;
+	default: fprintf(out, "Token(<%d>)\n", tkn.kind); break;
 	}
 }

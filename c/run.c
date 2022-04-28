@@ -1,10 +1,10 @@
-#include "env.h"
+#include "environment.h"
 #include "ast.h"
 #include "shared.h"
 #include <stdbool.h>
 #include <string.h>
 
-void run_declaration(const ast_declaration *d, env *e) {
+void run_declaration(const ast_declaration *d, environment *e) {
 	if (d->kind == AST_GLOBAL) {
 		declare_global(e, d->name, VNULL);
 		return;
@@ -14,8 +14,8 @@ void run_declaration(const ast_declaration *d, env *e) {
 }
 
 
-value run_expression(ast_expression *expr, env *e);
-value run_primary(ast_primary *prim, env *e){
+value run_expression(ast_expression *expr, environment *e);
+value run_primary(ast_primary *prim, environment *e){
 	value v1, v2;
 
 	switch (prim->kind) {
@@ -36,7 +36,7 @@ value run_primary(ast_primary *prim, env *e){
 		else if (prim->prim->kind == AST_VAR && !strcmp(prim->prim->ident, "length")) kind = 4;
 		else v1 = run_primary(prim->prim, e);
 
-		value args[prim->amnt];
+		value args[prim->amnt+1]; // `+1` is bc you cant have zero-sized vla
 		for (int i = 0; i < prim->amnt; ++i)
 			args[i] = run_expression(prim->args[i], e);
 
@@ -48,6 +48,7 @@ value run_primary(ast_primary *prim, env *e){
 		case 4:
 			switch (classify(v1)) {
 			case V_STR:
+				printf("yup\n");
 				return num2value(strlen(value2str(args[0])));
 			case V_ARY:
 				return num2value(value2ary(args[0])->len);
@@ -85,7 +86,7 @@ value run_primary(ast_primary *prim, env *e){
 	}
 }
 
-value run_expression(ast_expression *expr, env *e){
+value run_expression(ast_expression *expr, environment *e){
 	value v, v2, v3;
 	switch (expr->kind) {
 	case AST_ASSIGN:
@@ -203,7 +204,7 @@ value run_expression(ast_expression *expr, env *e){
 #define BREAK_REQUESTED 2
 #define CONTINUE_REQUESTED 3
 
-int run_block(ast_block *block, value *ret, env *e) {
+int run_block(ast_block *block, value *ret, environment *e) {
 	int retkind;
 
 	for (int i = 0; i < block->amnt; ++i) {
