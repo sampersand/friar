@@ -25,6 +25,7 @@ typedef struct {
 #define VUNDEF 3
 
 static inline value ary2value(array *a) {
+	assert(((size_t) a & 7) == 0);
 	return (value) a | 2;
 }
 static inline array *value2ary(value v) {
@@ -41,12 +42,12 @@ static inline long long value2num(value v) {
 }
 
 static inline value str2value(char *s) {
-	assert(((size_t) s & 3) == 0);
+	assert(((size_t) s & 7) == 0);
 	return (long long) s;
 }
 static inline char *value2str(value v) {
-	assert((v & 7)==0);
-	return (char*)v;
+	assert((v & 7) == 0);
+	return (char *) v;
 }
 
 static inline enum { V_INT, V_STR, V_BOOL, V_NULL, V_ARY, V_FUNC } classify(value v) {

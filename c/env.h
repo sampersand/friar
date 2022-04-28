@@ -16,7 +16,7 @@ typedef struct {
 } map;
 
 typedef struct _env {
-	unsigned stack_pointer;
+	unsigned sp;
 	map globals, stackframes[STACKFRAME_LIMIT];
 } env;
 
