@@ -46,7 +46,7 @@ value run_primary(ast_primary *prim, environment *e){
 		case 2: case 3:
 			die("todo(fncall)");
 		case 4:
-			switch (classify(v1)) {
+			switch (classify(args[0])) {
 			case V_STR:
 				printf("yup\n");
 				return num2value(strlen(value2str(args[0])));
