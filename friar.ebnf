@@ -1,0 +1,47 @@
+program := {<declaration>} ;
+declaration := <global-declaration> | <function-declaration> ;
+
+global-declaration := 'global' IDENTIFIER ;
+function-declaration := 'function' IDENTIFIER '(' {IDENTIFIER ','} [IDENTIFIER] ')' <block> ;
+
+block := '{' {[<statement>] ';'} '}' ;
+statement
+ := <return-statement>
+  | <if-statement>
+  | <while-statement>
+  | <break-statement>
+  | <continue-statement>
+  | <expression> ';'
+  ;
+return-statement := 'return' [<expression>] ';' ;
+if-statement := 'if' <expression> <block> ['else' <block>] ;
+while-statement := 'while' <expression> <block> ;
+break-statement := 'break' ';' ;
+continue-statement := 'continue' ';' ;
+
+expression
+ := <simple-assignment>
+  | <index-assignment>
+  | <binary-op>
+  | <primary>
+  ;
+simple-assignment := IDENTIFIER '=' <expression> ;
+index-assignment := <indexing> '=' <expression> ;
+binary-op := <primary> BINARY_OP <expression> ;
+
+primary
+ := <paren-expression>
+  | <indexing>
+  | <function-call>
+  | <unary-op>
+  | <array-literal>
+  | <variable>
+  | <literal>
+  ;
+paren-expression := '(' <expression> ')'  ;
+indexing := <primary> '[' <expression> ']' ;
+function-call := <primary> '(' {<expression> ','} [<expression>] ')' ;
+unary-op := UNARY_OP <primary> ;
+array-literal :=  '[' {<expression> ','} [<expression>] ']' ;
+variable := IDENTIFIER ;
+literal := STRING | INTEGER | 'true' | 'false' | 'null' ;
