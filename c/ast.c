@@ -90,6 +90,7 @@ again:
 		break;
 
 	default:
+		unadvance(tzr, tkn);
 		free(prim);
 		return 0;
 	}
@@ -248,6 +249,7 @@ static ast_declaration *parse_global(tokenizer *tzr) {
 	ast_declaration *decl = malloc(sizeof(ast_declaration));
 	decl->kind = AST_GLOBAL;
 	decl->name = expect(tzr, TK_IDENT).str;
+	expect(tzr, TK_SEMICOLON);
 	return decl;
 }
 
