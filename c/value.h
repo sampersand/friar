@@ -48,31 +48,28 @@ static inline value_kind classify(value val) {
 	}
 }
 
-#define new_value(inp) ((_Generic((inp),\
-	array *: new_value_array, \
-	number: new_value_number, \
-	string *: new_value_string, \
-	function *: new_value_function \
-))(inp))
-
-static inline value new_value_array(array *ary) {
+static inline value new_array_value(array *ary) {
 	assert(((value) ary & TAG_MASK) == 0);
 
 	return (value) ary | TAG_ARRAY;
 }
 
-static inline value new_value_number(number num) {
+static inline value new_number_value(number num) {
 	return (num << 3) | TAG_NUMBER;
 }
 
-static inline value new_value_string(string *str) {
+static inline value new_string_value(string *str) {
 	assert(((value) str & TAG_MASK) == 0);
 	return (value) str | TAG_STRING;
 }
 
-static inline value new_value_function(function *func) {
+static inline value new_function_value(function *func) {
 	assert(((value) func & TAG_MASK) == 0);
 	return (value) func | TAG_FUNCTION;
+}
+
+static inline value new_boolean_value(bool boolean) {
+	return boolean ? VTRUE : VFALSE;
 }
 
 static inline bool is_boolean(value val) {

@@ -41,8 +41,10 @@ static token parse_integer(tokenizer *tzr, bool is_negative) {
 		parse_error(tzr, "bad character '%c' after integer literal", c);
 
 
-	if (is_negative) num = -num;
-	return tkn.v = new_value(num), tkn;
+	if (is_negative)
+		num = -num;
+
+	return (token) { .kind = TK_LITERAL, .v = new_number_value(num) };
 }
 
 static token parse_identifier(tokenizer *tzr) {
@@ -106,7 +108,7 @@ static token parse_string(tokenizer *tzr) {
 	// simple case, just return the original string.
 	if (!was_anything_escaped)
 		return (token) { .kind=TK_LITERAL,
-			.v = new_value(new_string2(strndup(start, length), length)) };
+			.v = new_string_value(new_string2(strndup(start, length), length)) };
 
 	// well, something was escaped, so we now need to deal with that.
 	char *str = malloc(length); // note not `+1`, as we're removing at least 1 slash.
@@ -145,7 +147,7 @@ static token parse_string(tokenizer *tzr) {
 	}
 
 	str[stridx] = '\0';
-	return (token) { .kind = TK_LITERAL, .v = new_value(new_string1(str)) };
+	return (token) { .kind = TK_LITERAL, .v = new_string_value(new_string1(str)) };
 }
 
 token next_token(tokenizer *tzr) {

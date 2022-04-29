@@ -90,7 +90,7 @@ value index_into(value ary, value idx) {
 	switch (classify(ary)) {
 	case VK_STRING:;
 		string *str = index_string(as_string(ary), num_idx);
-		return str == NULL ? VNULL : new_value(str);
+		return str == NULL ? VNULL : new_string_value(str);
 
 	case VK_ARRAY:;
 		value ret = index_array(as_array(ary), num_idx);

@@ -12,7 +12,7 @@ void run_declaration(const ast_declaration *d, environment *e) {
 		return;
 	}
 
-	declare_global(e, d->name, new_value(new_function(d->name, d->argc, d->args, d->block)));
+	declare_global(e, d->name, new_function_value(new_function(d->name, d->argc, d->args, d->block)));
 }
 
 
@@ -51,9 +51,9 @@ value run_primary(ast_primary *prim, environment *e){
 			switch (classify(args[0])) {
 			case VK_STRING:
 				printf("yup\n");
-				return new_value((number) as_string(args[0])->length);
+				return new_number_value(as_string(args[0])->length);
 			case VK_ARRAY:
-				return new_value((number) as_array(args[0])->length);
+				return new_number_value(as_array(args[0])->length);
 			default:
 				die("can only get lengths of arrays and strings");
 			}
@@ -64,7 +64,7 @@ value run_primary(ast_primary *prim, environment *e){
 		v1 = run_primary(prim->prim, e);
 		if (!is_number(v1))
 			die("can only negate numbers, not %llx", v1);
-		return new_value(-as_number(v1));
+		return new_number_value(-as_number(v1));
 
 	case AST_NOT:
 		v1 = run_primary(prim->prim, e);
@@ -77,12 +77,13 @@ value run_primary(ast_primary *prim, environment *e){
 		a->elements = malloc((a->capacity = a->length = prim->amnt) * sizeof(value));
 		for (int i = 0; i < a->length; ++i)
 			a->elements[i] = run_expression(prim->args[i], e);
-		return new_value(a);
+		return new_array_value(a);
+
 	case AST_VAR:
 		if ((v1 = lookup_var(e, prim->ident)) == VUNDEF)
 			die("undefined variable '%s' accessed", prim->ident);
-
 		return v1;
+
 	case AST_LITERAL:
 		return prim->value;
 	}
@@ -112,7 +113,7 @@ value run_expression(ast_expression *expr, environment *e){
 		case TK_ADD:
 			if (is_number(v)) {
 				if (!is_number(v2)) die("can only add ints to ints");
-				return new_value(as_number(v) + as_number(v2));
+				return new_number_value(as_number(v) + as_number(v2));
 			}
 
 			if (is_array(v)) {
@@ -121,7 +122,7 @@ value run_expression(ast_expression *expr, environment *e){
 				ret->elements = malloc((ret->length = ret->capacity = a->length+b->length) * sizeof(value));
 				memcpy(ret->elements, a->elements, a->length*sizeof(value));
 				memcpy(ret->elements + a->length, b->elements, b->length*sizeof(value));
-				return new_value(ret);
+				return new_array_value(ret);
 			}
 
 			if (is_string(v)) {
@@ -148,32 +149,32 @@ value run_expression(ast_expression *expr, environment *e){
 				default:
 					die("todo, convert other types to strings, not %d", classify(v2));
 				}
-				return new_value(new_string1(c));
+				return new_string_value(new_string1(c));
 			}
 
 		case TK_SUB:
 			if (!is_number(v) || !is_number(v2))
 				die("can only subtract ints from ints");
 
-			return new_value(as_number(v) - as_number(v2));
+			return new_number_value(as_number(v) - as_number(v2));
 
 		case TK_MUL:
 			if (!is_number(v) || !is_number(v2))
 				die("can only multiply ints with ints");
 
-			return new_value(as_number(v) * as_number(v2));
+			return new_number_value(as_number(v) * as_number(v2));
 
 		case TK_DIV:
 			if (!is_number(v) || !is_number(v2))
 				die("can only divide ints from ints");
 
-			return new_value(as_number(v) / as_number(v2));
+			return new_number_value(as_number(v) / as_number(v2));
 
 		case TK_MOD:
 			if (!is_number(v) || !is_number(v2))
 				die("can only modulo ints from ints");
 
-			return new_value(as_number(v) % as_number(v2));
+			return new_number_value(as_number(v) % as_number(v2));
 
 		case TK_LTH:
 			if (classify(v) != classify(v2)) die("can only compare like types");
