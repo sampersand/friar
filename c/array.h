@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assert.h>
+#include <stdbool.h>
 #include "shared.h"
 #include "valuedefn.h"
 
@@ -23,6 +24,10 @@ static inline array *alloc_array(unsigned capacity) {
 void dealloc_array(array *ary);
 
 static inline void free_array(array *ary) {
+#ifndef WE_SOLVED_FREE_ISSUES
+	return;
+#endif
+
 	assert(ary->refcount != 0);
 
 	ary->refcount--;
@@ -38,3 +43,6 @@ static inline array *clone_array(array *ary) {
 void push_array(array *ary, value val);
 value index_array(const array *ary, int idx);
 void index_assign_array(array *ary, int idx, value val);
+array *add_arrays(array *lhs, array *rhs);
+int compare_arrays(const array *lhs, const array *rhs);
+bool equate_arrays(const array *lhs, const array *rhs);

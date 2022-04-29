@@ -13,9 +13,6 @@
 #include "environment.h"
 #include "ast.h"
 
-static inline void free_value(value val) { return; }
-static inline value clone_value(value val) { return val; }
-
 typedef enum {
 	VK_BOOLEAN,
 	VK_NULL,
@@ -141,4 +138,9 @@ value sub_values(value lhs, value rhs);
 value mul_values(value lhs, value rhs);
 value div_values(value lhs, value rhs);
 value mod_values(value lhs, value rhs);
-value cmp_values(value lhs, value rhs);
+int compare_values(value lhs, value rhs);
+bool equate_values(value lhs, value rhs);
+
+void free_value(value val);
+value clone_value(value val);
+

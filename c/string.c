@@ -28,10 +28,26 @@ string *index_string(const string *str, int idx) {
 	if (str->length <= idx)
 		return NULL;
 
-	char *ret = xmalloc(2);
-	ret[0] = str->ptr[idx];
-	ret[1] = '\0';
+	string *ret = alloc_string(1);
+	ret->ptr[0] = str->ptr[idx];
+	ret->ptr[1] = '\0';
 
-	return new_string2(ret, 1);
+	return ret;
 }
 
+string *add_strings(string *lhs, string *rhs) {
+	if (lhs->length == 0) return clone_string(rhs);
+	if (rhs->length == 0) return clone_string(lhs);
+
+	string *str = alloc_string(lhs->length + rhs->length);
+	memcpy(str->ptr, lhs->ptr, lhs->length);
+	memcpy(str->ptr + lhs->length, rhs->ptr, rhs->length + 1); // `+1` for `\0`.
+
+	return str;
+}
+
+int compare_strings(const string *lhs, const string *rhs) {
+	int cmp = strcmp(lhs->ptr, rhs->ptr);
+
+	return cmp < 0 ? -1 : cmp == 0 ? 0 : 1;
+}

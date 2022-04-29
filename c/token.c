@@ -29,90 +29,105 @@ static void advance(tokenizer *tzr) {
 	tzr->stream++;
 }
 
-static token parse_integer(tokenizer *tzr, bool is_negative) {
-	token tkn = { .kind = TK_LITERAL };
+static token parse_integer(tokenizer *tzr) {
 	number num = 0;
-
 	char c;
-	for (; isdigit(c = peek(tzr)); advance(tzr))
-		num = num*10 + (c - '0');
 
-	if (isalpha(c) || c == '_')
+	while (isdigit(c = peek(tzr))) {
+		num = num * 10 + (c - '0');
+		advance(tzr);
+	}
+
+	if (isalnum(c) || c == '_')
 		parse_error(tzr, "bad character '%c' after integer literal", c);
 
-
-	if (is_negative)
-		num = -num;
-
 	return (token) { .kind = TK_LITERAL, .v = new_number_value(num) };
+}
+
+static bool isalnum_or_underscore(char c) {
+	return isalnum(c) || c == '_';
 }
 
 static token parse_identifier(tokenizer *tzr) {
 	const char *start = tzr->stream;
 
-	char c;
-	for(; isalnum(c = peek(tzr)) || c == '_'; advance(tzr));
+	// find the length of the identifier.
+	while (isalnum_or_underscore(peek(tzr)))
+		advance(tzr);
+	unsigned length = tzr->stream - start;
 
-	int len = tzr->stream - start;
+	// check for predefined identifiers
+	if (!strncmp(start, "true", length)) return (token) { .kind = TK_LITERAL, .v = VTRUE };
+	if (!strncmp(start, "false", length)) return (token) { .kind = TK_LITERAL, .v = VFALSE };
+	if (!strncmp(start, "null", length)) return (token) { .kind = TK_LITERAL, .v = VNULL };
+	if (!strncmp(start, "global", length)) return (token) { .kind = TK_GLOBAL };
+	if (!strncmp(start, "function", length)) return (token) { .kind = TK_FUNCTION };
+	if (!strncmp(start, "if", length)) return (token) { .kind = TK_IF };
+	if (!strncmp(start, "else", length)) return (token) { .kind = TK_ELSE };
+	if (!strncmp(start, "while", length)) return (token) { .kind = TK_WHILE };
+	if (!strncmp(start, "break", length)) return (token) { .kind = TK_BREAK };
+	if (!strncmp(start, "continue", length)) return (token) { .kind = TK_CONTINUE };
+	if (!strncmp(start, "return", length)) return (token) { .kind = TK_RETURN };
 
-	if (!strncmp(start, "true", len)) return (token) { .kind = TK_LITERAL, .v = VTRUE };
-	if (!strncmp(start, "false", len)) return (token) { .kind = TK_LITERAL, .v = VFALSE };
-	if (!strncmp(start, "null", len)) return (token) { .kind = TK_LITERAL, .v = VNULL };
-	#define CHECK_FOR_KEYWORD(str_, kind_) \
-		if (!strncmp(start, str_, strlen(str_))) return (token) {.kind= kind_};
-	CHECK_FOR_KEYWORD("global", TK_GLOBAL)
-	CHECK_FOR_KEYWORD("function", TK_FUNCTION)
-	CHECK_FOR_KEYWORD("if", TK_IF)
-	CHECK_FOR_KEYWORD("else", TK_ELSE)
-	CHECK_FOR_KEYWORD("while", TK_WHILE)
-	CHECK_FOR_KEYWORD("break", TK_BREAK)
-	CHECK_FOR_KEYWORD("continue", TK_CONTINUE)
-	CHECK_FOR_KEYWORD("return", TK_RETURN)
-
-	return (token) { .kind=TK_IDENT, .str = strndup(start, tzr->stream - start) };
+	// it's a normal identifier, retunr that.
+	return (token) { .kind = TK_IDENT, .str = strndup(start, length) };
 }
 
 static int parse_hex(tokenizer *tzr, char c) {
-	if (isdigit(c)) return c - '0';
-	if ('a' <= c && c <= 'f') return c - 'a' + 10;
-	if ('A' <= c && c <= 'F') return c - 'F' + 10;
+	if (isdigit(c))
+		return c - '0';
+
+	if ('a' <= c && c <= 'f')
+		return c - 'a' + 10;
+
+	if ('A' <= c && c <= 'F')
+		return c - 'F' + 10;
+
 	parse_error(tzr, "unknown hex digit '%c'", c);
 }
 
 static token parse_string(tokenizer *tzr) {
 	char quote = peek(tzr);
 	advance(tzr);
+	assert(quote == '\'' || quote == '\"');
 
 	const char *start = tzr->stream;
-	int starting_line = tzr->lineno;
 	bool was_anything_escaped = false;
+	int starting_line = tzr->lineno;
 
 	char c;
-	while ((c = peek(tzr)) != quote) {
+	do {
+		c = peek(tzr);
+
 		if (c == '\0')
 			parse_error(tzr, "unterminated quote encountered started on %d", starting_line);
 
-		advance(tzr);
+		if (c == '\\') {
+			was_anything_escaped = true;
+			advance(tzr);
 
-		if (c == '\\')  {
-			c = peek(tzr);
-
-			if (quote == '\"' || (c == '\\' || c == '\'' || c == '\"'))
-				was_anything_escaped = true, advance(tzr);
+			if (peek(tzr) == '\0')
+				parse_error(tzr, "unterminated escape sequence of string started on %d", starting_line);
 		}
-	}
 
-	int length = tzr->stream - start;
-	advance(tzr);
+		advance(tzr);
+	} while (c != quote);
+
+	// We need the `- 1` as it'll exclude the closing quote.
+	unsigned length = tzr->stream - start - 1;
 
 	// simple case, just return the original string.
-	if (!was_anything_escaped)
-		return (token) { .kind=TK_LITERAL,
-			.v = new_string_value(new_string2(strndup(start, length), length)) };
+	if (!was_anything_escaped) {
+		return (token) {
+			.kind = TK_LITERAL,
+			.v = new_string_value(new_string2(strndup(start, length), length))
+		};
+	}
 
 	// well, something was escaped, so we now need to deal with that.
-	char *str = malloc(length); // note not `+1`, as we're removing at least 1 slash.
+	char *return_string = malloc(length); // note not `+1`, as we're removing at least 1 slash.
 	int i = 0, stridx = 0;
+	char *str = return_string;
 
 	while (i < length) {
 		if (start[i] != '\\') {
@@ -169,16 +184,11 @@ token next_token(tokenizer *tzr) {
 	case '=': case '!': case '<': case '>':
 		if (tzr->stream[1] == '=')
 			tzr->stream++, c += 0x80;
-		goto normal;
 
-	case '+': case '-': 
-		if (isdigit(tzr->stream[1]))
-			return advance(tzr), parse_integer(tzr, c == '-');
-		// fallthru
-
+		// fallthrough
 	case '(': case ')': case '[': case ']': case '{': case '}':
-	case ',': case ';': case '*': case '/': case '%':
-	normal:
+	case '+': case '-': case '*': case '/': case '%':
+	case ',': case ';': 
 		advance(tzr);
 		// fallthru
 
@@ -187,7 +197,7 @@ token next_token(tokenizer *tzr) {
 	}
 
 	// for more complicated ones, defer to their functions.
-	if (isdigit(c)) return parse_integer(tzr, false);
+	if (isdigit(c)) return parse_integer(tzr);
 	if (isalpha(c) || c == '_') return parse_identifier(tzr);
 	if (c == '\'' || c == '\"') return parse_string(tzr);
 

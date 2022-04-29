@@ -53,6 +53,42 @@ void dump_value(FILE *out, value val) {
 	}
 }
 
+void free_value(value val) {
+	switch (classify(val)) {
+	case VK_STRING:
+		free_string(as_string(val));
+		return;
+
+	case VK_ARRAY:
+		free_array(as_array(val));
+		return;
+
+	case VK_FUNCTION:
+		free_function(as_function(val));
+		return;
+
+	default:
+		return;
+	}
+}
+
+value clone_value(value val) {
+	switch (classify(val)) {
+	case VK_STRING:
+		return new_string_value(clone_string(as_string(val)));
+
+	case VK_ARRAY:
+		return new_array_value(clone_array(as_array(val)));
+
+	case VK_FUNCTION:
+		return new_function_value(clone_function(as_function(val)));
+
+	default:
+		return val;
+	}
+}
+
+
 const char *value_kind_name(value_kind kind) {
 	switch (kind) {
 	case VK_BOOLEAN: return "boolean";
@@ -115,31 +151,129 @@ value not_value(value val) {
 	return new_number_value(!as_boolean(val));
 }
 
-value add_values(value lhs, value rhs) {
+string *to_string(value val) {
+	switch (classify(val)) {
+	case VK_STRING:
+		return clone_string(as_string(val));
 
+	case VK_NULL:
+		return new_string2(strdup("null"), 4);
+
+	case VK_BOOLEAN:
+		if (val == VTRUE)
+			return new_string2(strdup("true"), 4);
+		else
+			return new_string2(strdup("false"), 5);
+
+	case VK_NUMBER: {
+		// lol there must be a better way to do this
+		string *str = alloc_string(47); // length of LONG_LONG_MIN
+		sprintf(str->ptr, "%lld", as_number(val));
+		str->length = strlen(str->ptr);
+		return str;
+	}
+
+	default:
+		die("cannot no conversion to string defined for %s", value_name(val));
+	}
+}
+
+value add_values(value lhs, value rhs) {
+	// add strings together
+	if (is_string(lhs) || is_string(rhs))
+		goto string;
+
+	if (classify(lhs) != classify(rhs))
+		die("can only add like kinds together, or strings to other types, not %s to %s",
+			value_name(lhs), value_name(rhs));
+
+	switch (classify(lhs)) {
+	case VK_NUMBER:
+		return new_number_value(as_number(lhs) + as_number(rhs));
+
+	case VK_ARRAY:
+		return new_array_value(add_arrays(as_array(lhs), as_array(rhs)));
+
+	case VK_STRING:
+	string: {
+		string *l = to_string(lhs);
+		string *r = to_string(rhs);
+		string *ret = add_strings(l, r);
+
+		free_string(l);
+		free_string(r);
+
+		return new_string_value(ret);
+	}
+
+	default:
+		die("can only add numbers, arrays, and strings, not %s", value_name(lhs));
+	}
 }
 
 value sub_values(value lhs, value rhs) {
-	if (!is_number(v) || !is_number(v2))
+	if (!is_number(lhs) || !is_number(rhs))
 		die("can only subtract numbers from numbers");
 
-	return new_number_value(as_number(v) - as_number(v2));
-
+	return new_number_value(as_number(lhs) - as_number(rhs));
 }
 
 value mul_values(value lhs, value rhs) {
+	if (!is_number(lhs) || !is_number(rhs))
+		die("can only multiply numbers from numbers");
 
+	return new_number_value(as_number(lhs) * as_number(rhs));
 }
 
 value div_values(value lhs, value rhs) {
+	if (!is_number(lhs) || !is_number(rhs))
+		die("can only divide numbers from numbers");
 
+	return new_number_value(as_number(lhs) / as_number(rhs));
 }
 
 value mod_values(value lhs, value rhs) {
+	if (!is_number(lhs) || !is_number(rhs))
+		die("can only modulo numbers with numbers");
 
+	return new_number_value(as_number(lhs) % as_number(rhs));
 }
 
-value cmp_values(value lhs, value rhs) {
+int compare_values(value lhs, value rhs) {
+	if (classify(lhs) != classify(rhs))
+		die("can only compare like kinds together, not %s to %s",
+			value_name(lhs), value_name(rhs));
 
+	switch (classify(lhs)) {
+	case VK_NUMBER:
+		return compare_numbers(as_number(lhs), as_number(rhs));
+
+	case VK_ARRAY:
+		return compare_arrays(as_array(lhs), as_array(rhs));
+
+	case VK_STRING:
+		return compare_strings(as_string(lhs), as_string(rhs));
+
+	default:
+		die("can only compare numbers, arrays, and strings, not %s", value_name(lhs));
+	}
 }
 
+bool equate_values(value lhs, value rhs) {
+	if (classify(lhs) != classify(rhs))
+		return false;
+
+	switch (classify(lhs)) {
+	case VK_BOOLEAN:
+	case VK_NULL:
+	case VK_NUMBER:
+	case VK_FUNCTION:
+		return lhs == rhs;
+
+	case VK_STRING:
+		return !strcmp(as_string(lhs)->ptr, as_string(rhs)->ptr);
+
+	case VK_ARRAY:
+		return equate_arrays(as_array(lhs), as_array(rhs));
+	}
+}

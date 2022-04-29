@@ -110,107 +110,19 @@ value run_expression(ast_expression *expr, environment *e){
 		v = run_primary(expr->prim, e);
 		v2 = run_expression(expr->rhs, e);
 		switch (expr->binop) {
-		case TK_ADD:
-			if (is_number(v)) {
-				if (!is_number(v2)) die("can only add ints to ints");
-				return new_number_value(as_number(v) + as_number(v2));
-			}
-
-			if (is_array(v)) {
-				if (!is_array(v2)) die("can only add arys to arys");
-				array *ret = malloc(sizeof(array)), *a = as_array(v), *b = as_array(v2);
-				ret->elements = malloc((ret->length = ret->capacity = a->length+b->length) * sizeof(value));
-				memcpy(ret->elements, a->elements, a->length*sizeof(value));
-				memcpy(ret->elements + a->length, b->elements, b->length*sizeof(value));
-				return new_array_value(ret);
-			}
-
-			if (is_string(v)) {
-				int length = as_string(v)->length;
-				char *c;
-				switch (classify(v2)) {
-				case VK_NULL:
-					strcat(memcpy(c = malloc(length + 5), as_string(v)->ptr, length + 1), "null");
-					break;
-				case VK_BOOLEAN:
-					if (v2 == VTRUE)
-						strcat(memcpy(c = malloc(length + 5), as_string(v)->ptr, length + 1), "true");
-					else
-						strcat(memcpy(c = malloc(length + 6), as_string(v)->ptr, length + 1), "false");
-					break;
-				case VK_NUMBER:
-					memcpy(c = malloc(47 + length), as_string(v)->ptr, length + 1);
-					sprintf(c + length, "%lld", as_number(v2));
-					break;
-				case VK_STRING:
-					strcat(memcpy(c = malloc(length + as_string(v2)->length),
-						as_string(v)->ptr, length+1), as_string(v2)->ptr);
-					break;
-				default:
-					die("todo, convert other types to strings, not %d", classify(v2));
-				}
-				return new_string_value(new_string1(c));
-			}
-
-		case TK_SUB:
-			if (!is_number(v) || !is_number(v2))
-				die("can only subtract ints from ints");
-
-			return new_number_value(as_number(v) - as_number(v2));
-
-		case TK_MUL:
-			if (!is_number(v) || !is_number(v2))
-				die("can only multiply ints with ints");
-
-			return new_number_value(as_number(v) * as_number(v2));
-
-		case TK_DIV:
-			if (!is_number(v) || !is_number(v2))
-				die("can only divide ints from ints");
-
-			return new_number_value(as_number(v) / as_number(v2));
-
-		case TK_MOD:
-			if (!is_number(v) || !is_number(v2))
-				die("can only modulo ints from ints");
-
-			return new_number_value(as_number(v) % as_number(v2));
-
-		case TK_LTH:
-			if (classify(v) != classify(v2)) die("can only compare like types");
-			if (classify(v) == VK_NUMBER) return as_number(v) < as_number(v2) ? VTRUE : VFALSE;
-			if (classify(v) == VK_STRING) return strcmp(as_string(v)->ptr, as_string(v2)->ptr) < 0 ? VTRUE : VFALSE;
-			die("can only compare ints and strings (and maybe arrays later)");
-		case TK_GTH:
-			if (classify(v) != classify(v2)) die("can only compare like types");
-			if (classify(v) == VK_NUMBER) return as_number(v) > as_number(v2) ? VTRUE : VFALSE;
-			if (classify(v) == VK_STRING) return strcmp(as_string(v)->ptr, as_string(v2)->ptr) > 0 ? VTRUE : VFALSE;
-			die("can only compare ints and strings (and maybe arrays later)");
-		case TK_LEQ:
-			if (classify(v) != classify(v2)) die("can only compare like types");
-			if (classify(v) == VK_NUMBER) return as_number(v) <= as_number(v2) ? VTRUE : VFALSE;
-			if (classify(v) == VK_STRING) return strcmp(as_string(v)->ptr, as_string(v2)->ptr) <= 0 ? VTRUE : VFALSE;
-			die("can only compare ints and strings (and maybe arrays later)");
-		case TK_GEQ:
-			if (classify(v) != classify(v2)) die("can only compare like types");
-			if (classify(v) == VK_NUMBER) return as_number(v) >= as_number(v2) ? VTRUE : VFALSE;
-			if (classify(v) == VK_STRING) return strcmp(as_string(v)->ptr, as_string(v2)->ptr) >= 0 ? VTRUE : VFALSE;
-			die("can only compare ints and strings (and maybe arrays later)");
-
-		case TK_EQL:
-		case TK_NEQ:;
-			int eql = v == v2;
-			if (classify(v) != classify(v2)) eql = 0;
-			else if(classify(v) == VK_STRING) eql = v == v2 || !strcmp(as_string(v)->ptr, as_string(v2)->ptr);
-			else if (classify(v) == VK_ARRAY) die("todo, compare arrays");
-
-			if (expr->binop == TK_EQL) eql = !v;
-			return eql ? VFALSE : VTRUE;
-
-		default:
-			die("unknown operator %d encountered", expr->binop);
+		case TK_ADD: return add_values(v, v2);
+		case TK_SUB: return sub_values(v, v2);
+		case TK_MUL: return mul_values(v, v2);
+		case TK_DIV: return div_values(v, v2);
+		case TK_MOD: return mod_values(v, v2);
+		case TK_LTH: return new_boolean_value(compare_values(v, v2) < 0);
+		case TK_GTH: return new_boolean_value(compare_values(v, v2) > 0);
+		case TK_LEQ: return new_boolean_value(compare_values(v, v2) <= 0);
+		case TK_GEQ: return new_boolean_value(compare_values(v, v2) >= 0);
+		case TK_EQL: return new_boolean_value(equate_values(v, v2));
+		case TK_NEQ: return new_boolean_value(!equate_values(v, v2));
+		default: die("[bug] unknown operator %d encountered", expr->binop);
 		}
-		return 0;
 	}
 }
 

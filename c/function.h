@@ -15,6 +15,10 @@ function *new_function(char *name, unsigned argc, char **argv, ast_block *body);
 void dealloc_function(function *func);
 
 static inline void free_function(function *func) {
+#ifndef WE_SOLVED_FREE_ISSUES
+	return;
+#endif
+
 	assert(func->refcount != 0);
 
 	func->refcount--;
