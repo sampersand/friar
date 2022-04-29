@@ -33,19 +33,26 @@ enum {
 	TAG_MASK     = (TAG_STRING | TAG_FUNCTION | TAG_ARRAY | TAG_NUMBER)
 };
 
-const char *value_kind_name(value_kind kind);
-
 static inline value_kind classify(value val) {
-	if (val == VNULL) return VK_NULL;
-	if (val == VTRUE || val == VFALSE) return VK_BOOLEAN;
+	if (val == VNULL)
+		return VK_NULL;
+
+	if (val == VTRUE || val == VFALSE)
+		return VK_BOOLEAN;
 
 	switch (val & TAG_MASK) {
 	case TAG_STRING: return VK_STRING;
 	case TAG_FUNCTION: return VK_FUNCTION;
 	case TAG_ARRAY: return VK_ARRAY;
 	case TAG_NUMBER: return VK_NUMBER;
-	default: die("invalid value tag: %lld", val & TAG_MASK);
+	default: die("[bug] invalid value tag: %lld", val & TAG_MASK);
 	}
+}
+
+const char *value_kind_name(value_kind kind);
+
+static inline const char *value_name(value val) {
+	return value_kind_name(classify(val));
 }
 
 static inline value new_array_value(array *ary) {
@@ -127,3 +134,11 @@ void index_assign(value ary, value idx, value val);
 value index_into(value ary, value idx);
 value call_value(value v, int argc, value *argv, environment *e);
 
+value neg_value(value val);
+value not_value(value val);
+value add_values(value lhs, value rhs);
+value sub_values(value lhs, value rhs);
+value mul_values(value lhs, value rhs);
+value div_values(value lhs, value rhs);
+value mod_values(value lhs, value rhs);
+value cmp_values(value lhs, value rhs);

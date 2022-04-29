@@ -100,3 +100,46 @@ value index_into(value ary, value idx) {
 		die("can only index into arrays or strs");
 	}
 }
+
+value neg_value(value val) {
+	if (!is_number(val))
+		die("can only negate numbers, not %s", value_name(val));
+
+	return new_number_value(-as_number(val));
+}
+
+value not_value(value val) {
+	if (!is_boolean(val))
+		die("can only not booleans, not %s", value_name(val));
+
+	return new_number_value(!as_boolean(val));
+}
+
+value add_values(value lhs, value rhs) {
+
+}
+
+value sub_values(value lhs, value rhs) {
+	if (!is_number(v) || !is_number(v2))
+		die("can only subtract numbers from numbers");
+
+	return new_number_value(as_number(v) - as_number(v2));
+
+}
+
+value mul_values(value lhs, value rhs) {
+
+}
+
+value div_values(value lhs, value rhs) {
+
+}
+
+value mod_values(value lhs, value rhs) {
+
+}
+
+value cmp_values(value lhs, value rhs) {
+
+}
+
