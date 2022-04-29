@@ -1,4 +1,5 @@
 #include "environment.h"
+#include "value.h"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -19,9 +20,10 @@ static void free_map(map *m) {
 }
 
 static value *lookup_in_map(map *m, const char *name) {
-	for (int i = 0; i < m->len; ++i)
+	for (int i = 0; i < m->len; ++i) {
 		if (!strcmp(m->entries[i].name, name))
 			return &m->entries[i].val;
+	}
 
 	return NULL;
 }
@@ -52,38 +54,32 @@ static value *lookup_local_or_global_var(environment *env, const char *name) {
 
 void init_environment(environment *env) {
 	env->stack_pointer = 0;
-
 	init_map(&env->globals);
 }
 
 void free_environment(environment *env) {
 	assert(env->stack_pointer == 0);
-
 	free_map(&env->globals);
 }
 
 void enter_stackframe(environment *env) {
 	++env->stack_pointer;
-
 	init_map(current_stackframe(env));
 }
 
 void leave_stackframe(environment *env) {
 	free_map(current_stackframe(env));
-
 	--env->stack_pointer;
 }
 
 
 value lookup_global_var(environment const *env, const char *name) {
 	value *ptr = lookup_in_map((map *) &env->globals, name);
-
 	return ptr == NULL ? VUNDEF : *ptr;
 }
 
 value lookup_var(const environment *env, const char *name) {
 	value *ptr = lookup_local_or_global_var((environment *) env, name);
-
 	return ptr == NULL ? VUNDEF : *ptr;
 }
 

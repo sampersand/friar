@@ -1,82 +1,132 @@
 #pragma once
+
 #include <stdio.h>
+#include <stdbool.h>
 #include <assert.h>
+
+#include "valuedefn.h"
 #include "shared.h"
-
-/*
-00...000 = VFALSE
-00...001 = VNULL
-00...010 = VTRUE
-XX...100 = number
-XX...000 = string
-XX...001 = function
-XX...010 = ary
-*/
-
-typedef long long value;
-typedef struct {
-	int cap, len;
-	value *eles;
-} array;
-
-#define VFALSE 0
-#define VNULL 1
-#define VTRUE 2
-#define VUNDEF 3
+#include "string.h"
+#include "array.h"
+#include "number.h"
+#include "function.h"
+#include "environment.h"
+#include "ast.h"
 
 static inline void free_value(value val) { return; }
 static inline value clone_value(value val) { return val; }
 
-static inline value ary2value(array *a) {
-	assert(((size_t) a & 7) == 0);
-	return (value) a | 2;
-}
-static inline array *value2ary(value v) {
-	assert((v & 7) == 2);
-	return (array *) (v & ~2);
+typedef enum {
+	VK_BOOLEAN,
+	VK_NULL,
+	VK_STRING,
+	VK_FUNCTION,
+	VK_ARRAY,
+	VK_NUMBER,
+} value_kind;
+
+enum {
+	TAG_STRING   = 0,
+	TAG_FUNCTION = 1,
+	TAG_ARRAY    = 2,
+	TAG_NUMBER   = 4,
+	TAG_MASK     = (TAG_STRING | TAG_FUNCTION | TAG_ARRAY | TAG_NUMBER)
+};
+
+const char *value_kind_name(value_kind kind);
+
+static inline value_kind classify(value val) {
+	if (val == VNULL) return VK_NULL;
+	if (val == VTRUE || val == VFALSE) return VK_BOOLEAN;
+
+	switch (val & TAG_MASK) {
+	case TAG_STRING: return VK_STRING;
+	case TAG_FUNCTION: return VK_FUNCTION;
+	case TAG_ARRAY: return VK_ARRAY;
+	case TAG_NUMBER: return VK_NUMBER;
+	default: die("invalid value tag: %lld", val & TAG_MASK);
+	}
 }
 
-static inline value num2value(long long n) {
-	return (n << 3) | 4;
+#define new_value(inp) ((_Generic((inp),\
+	array *: new_value_array, \
+	number: new_value_number, \
+	string *: new_value_string, \
+	function *: new_value_function \
+))(inp))
+
+static inline value new_value_array(array *ary) {
+	assert(((value) ary & TAG_MASK) == 0);
+
+	return (value) ary | TAG_ARRAY;
 }
 
-static inline long long value2num(value v) {
-	return (long long) v >> 3;
+static inline value new_value_number(number num) {
+	return (num << 3) | TAG_NUMBER;
 }
 
-static inline value str2value(char *s) {
-	assert(((size_t) s & 7) == 0);
-	return (long long) s;
-}
-static inline char *value2str(value v) {
-	assert((v & 7) == 0);
-	return (char *) v;
+static inline value new_value_string(string *str) {
+	assert(((value) str & TAG_MASK) == 0);
+	return (value) str | TAG_STRING;
 }
 
-static inline enum { V_INT, V_STR, V_BOOL, V_NULL, V_ARY, V_FUNC } classify(value v) {
-	if (v == VNULL) return V_NULL;
-	if (v == VTRUE || v==VFALSE) return V_BOOL;
-	if ((v & 7) == 4) return V_INT;
-	if ((v & 7) == 0) return V_STR;
-	if ((v & 7) == 2) return V_ARY;
-	if ((v & 7) == 1) return V_FUNC;
-	die("unknown value kind %llx", v);
+static inline value new_value_function(function *func) {
+	assert(((value) func & TAG_MASK) == 0);
+	return (value) func | TAG_FUNCTION;
 }
 
-static inline int value2bool(value v) {
-	return v != VNULL & v != VFALSE;
+static inline bool is_boolean(value val) {
+	return val == VTRUE || val == VFALSE;
 }
 
-static inline int is_number(value v) {
-	return (v & 7) == 4;
+static inline bool is_null(value val) {
+	return val == VTRUE;
+}
+
+static inline bool is_array(value val) {
+	return classify(val) == VK_ARRAY;
+}
+
+static inline bool is_number(value val) {
+	return classify(val) == VK_NUMBER;
+}
+
+static inline bool is_string(value val) {
+	return classify(val) == VK_STRING;
+}
+
+static inline bool is_function(value val) {
+	return classify(val) == VK_FUNCTION;
+}
+
+static inline bool as_boolean(value val) {
+	assert(is_boolean(val));
+	return val == VTRUE;
+}
+
+static inline array *as_array(value val) {
+	assert(is_array(val));
+	return (array *) (val & ~TAG_MASK);
+}
+
+static inline number as_number(value val) {
+	assert(is_number(val));
+	return (number) val >> 3;
+}
+
+static inline string *as_string(value val) {
+	assert(is_string(val));
+	return (string *) (val & ~TAG_MASK);
+}
+
+static inline function *as_function(value val) {
+	assert(is_function(val));
+	return (function *) (val & ~TAG_MASK);
 }
 
 void dump_value(FILE *out, value v);
 
-struct ast_block;
-value new_function(char *name, int argc, char **argv, struct ast_block *block);
 void index_assign(value ary, value idx, value val);
 value index_into(value ary, value idx);
-struct _environment;
-value call_value(value v, int argc, value *argv, struct _environment *e);
+value call_value(value v, int argc, value *argv, environment *e);
 

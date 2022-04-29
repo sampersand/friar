@@ -8,7 +8,7 @@ all: main
 clean:
 	-@rm *.o main
 
-main: main.o token.o ast.o value.o run.o environment.o shared.o
+main: main.o token.o ast.o value.o run.o environment.o shared.o array.o string.o function.o
 	$(CC) $(CFLAGS) -o $@ $+
 
 *.o: *.c

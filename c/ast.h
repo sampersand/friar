@@ -1,5 +1,6 @@
 #pragma once
-#include "value.h"
+
+#include "valuedefn.h"
 #include "token.h"
 
 struct ast_declaration *next_declaration(tokenizer *tzr);
@@ -54,3 +55,11 @@ typedef struct ast_declaration {
 	struct ast_block *block;
 } ast_declaration;
 
+
+struct _environment;
+int run_block(const ast_block *block, value *ret, struct _environment *env);
+
+static inline void free_ast_block(ast_block *block) {
+
+	// todo. also free `ab`.
+}

@@ -1,7 +1,5 @@
 #include "token.h"
-#include "ast.h"
-#include "environment.h"
-#include "shared.h"
+#include "value.h"
 
 void run_declaration(ast_declaration*, environment*);
 
@@ -17,6 +15,9 @@ int main(int argc, char **argv) {
 	value v;
 	if ((v = lookup_global_var(&env, "main")) == VUNDEF)
 		die("you must define a `main` function");
+
+	dump_value(stdout, v);putchar('\n');
+
 	call_value(v, 0, 0, &env);
 	free_environment(&env);
 }

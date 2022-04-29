@@ -1,6 +1,6 @@
 #pragma once
 #include <stdio.h>
-#include "value.h"
+#include "valuedefn.h"
 
 typedef enum {
 	TK_EOF = '\0',
@@ -35,7 +35,7 @@ typedef enum {
 	TK_NEQ = TK_NOT + 0x80
 } token_kind; 
 
-typedef struct token {
+typedef struct {
 	token_kind kind;
 	union {
 		value v;
@@ -43,12 +43,12 @@ typedef struct token {
 	};
 } token;
 
-typedef struct tokenizer {
+typedef struct {
 	const char *stream;
 	int lineno;
 	token prev;
 } tokenizer;
 
 tokenizer new_tokenizer(const char *stream);
-token next_token(tokenizer *);
+token next_token(tokenizer *tzr);
 void dump_token(FILE *out, token tkn);

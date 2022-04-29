@@ -1,84 +1,101 @@
 #include <stdlib.h>
 #include <string.h>
-#include "shared.h"
 #include "value.h"
 #include "ast.h"
-#include "environment.h"
 
-void dump_value(FILE *out, value v) {
-	fprintf(out, "<value:%08llx>", v);
+void dump_value(FILE *out, value val) {
+	switch (classify(val)) {
+	case VK_BOOLEAN:
+		fprintf(out, "Boolean(%s)", as_boolean(val) ? "true" : "false");
+		break;
+
+	case VK_NULL:
+		fputs("Null()", out);
+		break;
+
+	case VK_STRING:
+		fprintf(out, "String(%s)", as_string(val)->ptr);
+		break;
+
+	case VK_FUNCTION: {
+		function *func = as_function(val);
+		fprintf(out, "Function(%s, args=[", func->name);
+
+		for (unsigned i = 0; i < func->argc; ++i) {
+			if (i != 0)
+				fputs(", ", out);
+
+			fputs(func->argv[i], out);
+		}
+
+		fputs("])", out);
+		break;
+	}
+
+	case VK_ARRAY: {
+		array *ary = as_array(val);
+
+		fprintf(out, "Array(");
+		for (unsigned i = 0; i < ary->length; ++i) {
+			if (i != 0)
+				fputs(", ", out);
+
+			dump_value(out, ary->elements[i]);
+		}
+		fputc(')', out);
+
+		break;
+	}
+
+	case VK_NUMBER:
+		fprintf(out, "Number(%lld)", as_number(val));
+		break;
+	}
 }
 
-typedef struct {
-	char *name, **argv;
-	int argc;
-	ast_block *block;
-} function;
-
-value new_function(char *name, int argc, char **argv, ast_block *block) {	
-	function *f = malloc(sizeof(function));
-	f->name = name;
-	f->argc = argc;
-	f->argv = argv;
-	f->block = block;
-
-	return (value) f | 1;
+const char *value_kind_name(value_kind kind) {
+	switch (kind) {
+	case VK_BOOLEAN: return "boolean";
+	case VK_NULL: return "null";
+	case VK_STRING: return "string";
+	case VK_FUNCTION: return "function";
+	case VK_ARRAY: return "array";
+	case VK_NUMBER: return "number";
+	}
 }
 
-value run_block(ast_block *, value *, environment *);
-value call_value(value v, int argc, value *argv, environment *e) {
-	if (classify(v) != V_FUNC)
-		die("cannot call invalid value: %llx", v);
+value call_value(value val, int argc, value *argv, environment *env) {
+	if (!is_function(val))
+		die("cannot call a value of kind %s", value_kind_name(classify(val)));
 
-	function *f = (function *) (v & ~1);
-	if (f->argc != argc)
-		die("argument mismatch for %s: expected %d, got %d", f->name, f->argc, argc);
-
-	enter_stackframe(e);
-	for (int i = 0; i < argc; ++i)
-		assign_var(e, f->argv[i], argv[i]);
-	value ret;
-	run_block(f->block, &ret, e);
-	leave_stackframe(e);
-	return ret;
+	return call_function(as_function(val), argc, argv, env);
 }
 
 void index_assign(value ary, value idx, value val) {
-	if (classify(ary) != V_ARY) die("can only index assign into arrays");
-	if (classify(idx) != V_INT) die("you must index with numbers");
+	if (!is_array(ary))
+		die("can only index assign into arrays");
 
-	long long i = value2num(idx);
-	array *a = value2ary(ary);
+	if (!is_number(idx))
+		die("you must index with numbers");
 
-	if (i < 0) die("negative indexing isnt supported rn");
-	if (a->len <= i) {
-		if (a->cap <= i)
-			a->eles = realloc(a->eles, (a->cap = i) * sizeof(value));
-		while (a->len <= i)
-			a->eles[a->len++] = VNULL;
-	}
-
-	a->eles[i] = val;
+	index_assign_array(as_array(ary), as_number(idx), val);
 }
 
 value index_into(value ary, value idx) {
-	if (classify(idx) != V_INT) die("you must index with numbers");
+	if (!is_number(idx))
+		die("you must index with numbers");
 
-	long long i = value2num(idx);
-	if (i < 0) die("negative indexing isnt supported rn");
+	number num_idx = as_number(idx);
 
 	switch (classify(ary)) {
-	case V_STR:;
-		char *s = value2str(ary);
-		if (strlen(s) <= i) return VNULL;
-		char *c = malloc(2);
-		c[0] = s[i];
-		c[1] = '\0';
-		return str2value(c);
+	case VK_STRING:;
+		string *str = index_string(as_string(ary), num_idx);
+		return str == NULL ? VNULL : new_value(str);
 
-	case V_ARY:;
-		array *a = value2ary(ary);
-		return a->len <= i ? VNULL : a->eles[i];
+	case VK_ARRAY:;
+		value ret = index_array(as_array(ary), num_idx);
+		return ret == VUNDEF ? VNULL : ret;
+
 	default:
 		die("can only index into arrays or strs");
 	}

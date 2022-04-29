@@ -1,8 +1,10 @@
+#include <stdbool.h>
+#include <string.h>
+
 #include "environment.h"
 #include "ast.h"
 #include "shared.h"
-#include <stdbool.h>
-#include <string.h>
+#include "value.h"
 
 void run_declaration(const ast_declaration *d, environment *e) {
 	if (d->kind == AST_GLOBAL) {
@@ -10,7 +12,7 @@ void run_declaration(const ast_declaration *d, environment *e) {
 		return;
 	}
 
-	declare_global(e, d->name, new_function(d->name, d->argc, d->args, d->block));
+	declare_global(e, d->name, new_value(new_function(d->name, d->argc, d->args, d->block)));
 }
 
 
@@ -42,16 +44,16 @@ value run_primary(ast_primary *prim, environment *e){
 
 		switch (kind){
 		case 0: return call_value(v1, prim->amnt, args, e);
-		case 1: printf("%s\n", value2str(args[0])); return VNULL;
+		case 1: printf("%s\n", as_string(args[0])->ptr); return VNULL;
 		case 2: case 3:
 			die("todo(fncall)");
 		case 4:
 			switch (classify(args[0])) {
-			case V_STR:
+			case VK_STRING:
 				printf("yup\n");
-				return num2value(strlen(value2str(args[0])));
-			case V_ARY:
-				return num2value(value2ary(args[0])->len);
+				return new_value((number) as_string(args[0])->length);
+			case VK_ARRAY:
+				return new_value((number) as_array(args[0])->length);
 			default:
 				die("can only get lengths of arrays and strings");
 			}
@@ -62,7 +64,7 @@ value run_primary(ast_primary *prim, environment *e){
 		v1 = run_primary(prim->prim, e);
 		if (!is_number(v1))
 			die("can only negate numbers, not %llx", v1);
-		return num2value(-value2num(v1));
+		return new_value(-as_number(v1));
 
 	case AST_NOT:
 		v1 = run_primary(prim->prim, e);
@@ -72,10 +74,10 @@ value run_primary(ast_primary *prim, environment *e){
 
 	case AST_ARY:;
 		array *a = malloc(sizeof(array));
-		a->eles = malloc((a->cap = a->len = prim->amnt) * sizeof(value));
-		for (int i = 0; i < a->len; ++i)
-			a->eles[i] = run_expression(prim->args[i], e);
-		return ary2value(a);
+		a->elements = malloc((a->capacity = a->length = prim->amnt) * sizeof(value));
+		for (int i = 0; i < a->length; ++i)
+			a->elements[i] = run_expression(prim->args[i], e);
+		return new_value(a);
 	case AST_VAR:
 		if ((v1 = lookup_var(e, prim->ident)) == VUNDEF)
 			die("undefined variable '%s' accessed", prim->ident);
@@ -108,85 +110,98 @@ value run_expression(ast_expression *expr, environment *e){
 		v2 = run_expression(expr->rhs, e);
 		switch (expr->binop) {
 		case TK_ADD:
-			if (classify(v) == V_INT) {
-				if (classify(v2) != V_INT) die("can only add ints to ints");
-				return num2value(value2num(v) + value2num(v2));
+			if (is_number(v)) {
+				if (!is_number(v2)) die("can only add ints to ints");
+				return new_value(as_number(v) + as_number(v2));
 			}
 
-			if (classify(v) == V_ARY) {
-				if (classify(v2) != V_ARY) die("can only add arys to arys");
-				array *ret = malloc(sizeof(array)), *a = value2ary(v), *b = value2ary(v2);
-				ret->eles = malloc((ret->len = ret->cap = a->len+b->len) * sizeof(value));
-				memcpy(ret->eles, a->eles, a->len*sizeof(value));
-				memcpy(ret->eles + a->len, b->eles, b->len*sizeof(value));
-				return ary2value(ret);
+			if (is_array(v)) {
+				if (!is_array(v2)) die("can only add arys to arys");
+				array *ret = malloc(sizeof(array)), *a = as_array(v), *b = as_array(v2);
+				ret->elements = malloc((ret->length = ret->capacity = a->length+b->length) * sizeof(value));
+				memcpy(ret->elements, a->elements, a->length*sizeof(value));
+				memcpy(ret->elements + a->length, b->elements, b->length*sizeof(value));
+				return new_value(ret);
 			}
 
-			if (classify(v) == V_STR) {
-				int len = strlen(value2str(v));
+			if (is_string(v)) {
+				int length = as_string(v)->length;
 				char *c;
 				switch (classify(v2)) {
-				case V_NULL:
-					strcat(memcpy(c = malloc(len + 5), value2str(v), len + 1), "null");
+				case VK_NULL:
+					strcat(memcpy(c = malloc(length + 5), as_string(v)->ptr, length + 1), "null");
 					break;
-				case V_BOOL:
+				case VK_BOOLEAN:
 					if (v2 == VTRUE)
-						strcat(memcpy(c = malloc(len + 5), value2str(v), len + 1), "true");
+						strcat(memcpy(c = malloc(length + 5), as_string(v)->ptr, length + 1), "true");
 					else
-						strcat(memcpy(c = malloc(len + 6), value2str(v), len + 1), "false");
+						strcat(memcpy(c = malloc(length + 6), as_string(v)->ptr, length + 1), "false");
 					break;
-				case V_INT:
-					memcpy(c = malloc(47 + len), value2str(v), len + 1);
-					sprintf(c + len, "%lld", value2num(v2));
+				case VK_NUMBER:
+					memcpy(c = malloc(47 + length), as_string(v)->ptr, length + 1);
+					sprintf(c + length, "%lld", as_number(v2));
 					break;
-				case V_STR:
-					strcat(memcpy(c = malloc(len + strlen(value2str(v2))), value2str(v), len+1), value2str(v2));
+				case VK_STRING:
+					strcat(memcpy(c = malloc(length + as_string(v2)->length),
+						as_string(v)->ptr, length+1), as_string(v2)->ptr);
 					break;
 				default:
 					die("todo, convert other types to strings, not %d", classify(v2));
 				}
-				return str2value(c);
+				return new_value(new_string1(c));
 			}
+
 		case TK_SUB:
-			if (classify(v) != V_INT || classify(v2) != V_INT) die("can only subtract ints from ints");
-			return num2value(value2num(v) - value2num(v2));
+			if (!is_number(v) || !is_number(v2))
+				die("can only subtract ints from ints");
+
+			return new_value(as_number(v) - as_number(v2));
+
 		case TK_MUL:
-			if (classify(v) != V_INT || classify(v2) != V_INT) die("can only multiply ints with ints");
-			return num2value(value2num(v) * value2num(v2));
+			if (!is_number(v) || !is_number(v2))
+				die("can only multiply ints with ints");
+
+			return new_value(as_number(v) * as_number(v2));
+
 		case TK_DIV:
-			if (classify(v) != V_INT || classify(v2) != V_INT) die("can only divide ints from ints");
-			return num2value(value2num(v) / value2num(v2));
+			if (!is_number(v) || !is_number(v2))
+				die("can only divide ints from ints");
+
+			return new_value(as_number(v) / as_number(v2));
+
 		case TK_MOD:
-			if (classify(v) != V_INT || classify(v2) != V_INT) die("can only modulo ints from ints");
-			return num2value(value2num(v) % value2num(v2));
+			if (!is_number(v) || !is_number(v2))
+				die("can only modulo ints from ints");
+
+			return new_value(as_number(v) % as_number(v2));
 
 		case TK_LTH:
 			if (classify(v) != classify(v2)) die("can only compare like types");
-			if (classify(v) == V_INT) return value2num(v) < value2num(v2) ? VTRUE : VFALSE;
-			if (classify(v) == V_STR) return strcmp(value2str(v), value2str(v2)) < 0 ? VTRUE : VFALSE;
+			if (classify(v) == VK_NUMBER) return as_number(v) < as_number(v2) ? VTRUE : VFALSE;
+			if (classify(v) == VK_STRING) return strcmp(as_string(v)->ptr, as_string(v2)->ptr) < 0 ? VTRUE : VFALSE;
 			die("can only compare ints and strings (and maybe arrays later)");
 		case TK_GTH:
 			if (classify(v) != classify(v2)) die("can only compare like types");
-			if (classify(v) == V_INT) return value2num(v) > value2num(v2) ? VTRUE : VFALSE;
-			if (classify(v) == V_STR) return strcmp(value2str(v), value2str(v2)) > 0 ? VTRUE : VFALSE;
+			if (classify(v) == VK_NUMBER) return as_number(v) > as_number(v2) ? VTRUE : VFALSE;
+			if (classify(v) == VK_STRING) return strcmp(as_string(v)->ptr, as_string(v2)->ptr) > 0 ? VTRUE : VFALSE;
 			die("can only compare ints and strings (and maybe arrays later)");
 		case TK_LEQ:
 			if (classify(v) != classify(v2)) die("can only compare like types");
-			if (classify(v) == V_INT) return value2num(v) <= value2num(v2) ? VTRUE : VFALSE;
-			if (classify(v) == V_STR) return strcmp(value2str(v), value2str(v2)) <= 0 ? VTRUE : VFALSE;
+			if (classify(v) == VK_NUMBER) return as_number(v) <= as_number(v2) ? VTRUE : VFALSE;
+			if (classify(v) == VK_STRING) return strcmp(as_string(v)->ptr, as_string(v2)->ptr) <= 0 ? VTRUE : VFALSE;
 			die("can only compare ints and strings (and maybe arrays later)");
 		case TK_GEQ:
 			if (classify(v) != classify(v2)) die("can only compare like types");
-			if (classify(v) == V_INT) return value2num(v) >= value2num(v2) ? VTRUE : VFALSE;
-			if (classify(v) == V_STR) return strcmp(value2str(v), value2str(v2)) >= 0 ? VTRUE : VFALSE;
+			if (classify(v) == VK_NUMBER) return as_number(v) >= as_number(v2) ? VTRUE : VFALSE;
+			if (classify(v) == VK_STRING) return strcmp(as_string(v)->ptr, as_string(v2)->ptr) >= 0 ? VTRUE : VFALSE;
 			die("can only compare ints and strings (and maybe arrays later)");
 
 		case TK_EQL:
 		case TK_NEQ:;
 			int eql = v == v2;
 			if (classify(v) != classify(v2)) eql = 0;
-			else if(classify(v) == V_STR) eql = v == v2 || !strcmp(value2str(v), value2str(v2));
-			else if (classify(v) == V_ARY) die("todo, compare arrays");
+			else if(classify(v) == VK_STRING) eql = v == v2 || !strcmp(as_string(v)->ptr, as_string(v2)->ptr);
+			else if (classify(v) == VK_ARRAY) die("todo, compare arrays");
 
 			if (expr->binop == TK_EQL) eql = !v;
 			return eql ? VFALSE : VTRUE;
@@ -204,7 +219,7 @@ value run_expression(ast_expression *expr, environment *e){
 #define BREAK_REQUESTED 2
 #define CONTINUE_REQUESTED 3
 
-int run_block(ast_block *block, value *ret, environment *e) {
+int run_block(const ast_block *block, value *ret, environment *e) {
 	int retkind;
 
 	for (int i = 0; i < block->amnt; ++i) {
@@ -216,14 +231,14 @@ int run_block(ast_block *block, value *ret, environment *e) {
 			return RETURN_REQUESTED;
 
 		case AST_IF:
-			if (value2bool(run_expression(s->expr, e)) ? 
+			if (as_boolean(run_expression(s->expr, e)) ? 
 				(retkind = run_block(s->body, ret, e)) :
 				s->else_body && (retkind=run_block(s->else_body, ret, e)))
 				return retkind;
 			break;
 
 		case AST_WHILE:
-			while (value2bool(run_expression(s->expr, e))) 
+			while (as_boolean(run_expression(s->expr, e))) 
 				if ((retkind = run_block(s->body, ret, e)) == BREAK_REQUESTED) break;
 				else if (retkind == RETURN_REQUESTED) return RETURN_REQUESTED;
 			break;

@@ -1,5 +1,6 @@
 #include "token.h"
 #include "shared.h"
+#include "value.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -9,7 +10,8 @@
 tokenizer new_tokenizer(const char *stream) {
 	return (tokenizer) {
 		.stream = stream,
-		.lineno = 1
+		.lineno = 1,
+		.prev = (token) { .kind = TK_EOF }
 	};
 }
 
@@ -21,13 +23,15 @@ static char peek(tokenizer *tzr) {
 }
 
 static void advance(tokenizer *tzr) {
-	if (*tzr->stream++ == '\n')
-		++tzr->lineno;
+	if (peek(tzr) == '\n')
+		tzr->lineno++;
+
+	tzr->stream++;
 }
 
 static token parse_integer(tokenizer *tzr, bool is_negative) {
 	token tkn = { .kind = TK_LITERAL };
-	long long num = 0;
+	number num = 0;
 
 	char c;
 	for (; isdigit(c = peek(tzr)); advance(tzr))
@@ -36,7 +40,9 @@ static token parse_integer(tokenizer *tzr, bool is_negative) {
 	if (isalpha(c) || c == '_')
 		parse_error(tzr, "bad character '%c' after integer literal", c);
 
-	return tkn.v = num2value(is_negative ? -num : num), tkn;
+
+	if (is_negative) num = -num;
+	return tkn.v = new_value(num), tkn;
 }
 
 static token parse_identifier(tokenizer *tzr) {
@@ -99,7 +105,8 @@ static token parse_string(tokenizer *tzr) {
 
 	// simple case, just return the original string.
 	if (!was_anything_escaped)
-		return (token) { .kind=TK_LITERAL, .v = str2value(strndup(start, length)) };
+		return (token) { .kind=TK_LITERAL,
+			.v = new_value(new_string2(strndup(start, length), length)) };
 
 	// well, something was escaped, so we now need to deal with that.
 	char *str = malloc(length); // note not `+1`, as we're removing at least 1 slash.
@@ -138,7 +145,7 @@ static token parse_string(tokenizer *tzr) {
 	}
 
 	str[stridx] = '\0';
-	return (token) { .kind = TK_LITERAL, .v = str2value(str) };
+	return (token) { .kind = TK_LITERAL, .v = new_value(new_string1(str)) };
 }
 
 token next_token(tokenizer *tzr) {
