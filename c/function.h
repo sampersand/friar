@@ -12,7 +12,7 @@ typedef struct {
 
 function *new_function(char *name, unsigned argc, char **argv, ast_block *body);
 
-void dealloc_function(function *func);
+void deallocate_function(function *func);
 
 static inline void free_function(function *func) {
 #ifndef WE_SOLVED_FREE_ISSUES
@@ -23,7 +23,7 @@ static inline void free_function(function *func) {
 
 	func->refcount--;
 	if (func->refcount == 0)
-		dealloc_function(func);
+		deallocate_function(func);
 }
 
 static inline function *clone_function(function *func) {

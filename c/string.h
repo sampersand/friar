@@ -15,13 +15,18 @@ static inline string *new_string1(char *ptr) {
 	return new_string2(ptr, strlen(ptr));
 }
 
-static inline string *alloc_string(unsigned capacity) {
+static inline string *allocate_string(unsigned capacity) {
 	char *c = xmalloc(capacity + 1);
+
+#ifndef NDEBUG
+	// This is required because `new_string2` has an `assert(strlen)` in it.
 	c[0] = '\0';
+#endif
+
 	return new_string2(c, 0);
 }
 
-void dealloc_string(string *str);
+void deallocate_string(string *str);
 
 static inline void free_string(string *str) {
 #ifndef WE_SOLVED_FREE_ISSUES
@@ -31,7 +36,7 @@ static inline void free_string(string *str) {
 
 	str->refcount--;
 	if (str->refcount == 0)
-		dealloc_string(str);
+		deallocate_string(str);
 }
 
 static inline string *clone_string(string *str) {
@@ -42,4 +47,4 @@ static inline string *clone_string(string *str) {
 string *index_string(const string *str, int idx);
 string *add_strings(string *lhs, string *rhs);
 int compare_strings(const string *lhs, const string *rhs);
-string *replicate_strings(string *str, unsigned amnt);
+string *replicate_string(string *str, unsigned amnt);

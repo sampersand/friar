@@ -14,7 +14,7 @@ array *new_array3(value *elements, unsigned length, unsigned capacity) {
 	return ary;
 }
 
-void dealloc_array(array *ary) {
+void deallocate_array(array *ary) {
 	assert(ary->refcount == 0);
 
 	for (unsigned i = 0; i < ary->length; i++)
@@ -55,7 +55,7 @@ array *add_arrays(array *lhs, array *rhs) {
 	if (lhs->length == 0) return clone_array(rhs);
 	if (rhs->length == 0) return clone_array(lhs);
 
-	array *ret = alloc_array(lhs->length + rhs->length);
+	array *ret = allocate_array(lhs->length + rhs->length);
 
 	for (unsigned i = 0; i < lhs->length; i++)
 		push_array(ret, lhs->elements[i]);
@@ -89,4 +89,19 @@ bool equate_arrays(const array *lhs, const array *rhs) {
 	}
 
 	return true;
+}
+
+array *replicate_array(array *ary, unsigned amnt) {
+	if (amnt == 1)
+		return clone_array(ary);
+
+	array *ret = allocate_array(ary->length * amnt);
+	ret->length = 0;
+
+	for (unsigned i = 0; i < amnt; i++) {
+		for (unsigned j = 0; j < ary->length; j++)
+			push_array(ret, clone_value(ary->elements[j]));
+	}
+
+	return ret;
 }

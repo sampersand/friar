@@ -179,7 +179,7 @@ string *to_string(value val) {
 
 	case VK_NUMBER: {
 		// lol there must be a better way to do this
-		string *str = alloc_string(47); // length of LONG_LONG_MIN
+		string *str = allocate_string(47); // length of LONG_LONG_MIN
 		sprintf(str->ptr, "%lld", as_number(val));
 		str->length = strlen(str->ptr);
 		return str;
@@ -243,10 +243,16 @@ value multiply_values(value lhs, value rhs) {
 		return new_number_value(as_number(lhs) + amnt);
 
 	case VK_STRING:
+		if (amnt < 0)
+			die("can only multiply strings by nonnegative integers.");
+
 		return new_string_value(replicate_string(as_string(lhs), amnt));
 
 	case VK_ARRAY:
-		return new_string_value(replicate_array(as_array(lhs), amnt));
+		if (amnt < 0)
+			die("can only multiply arrays by nonnegative integers.");
+
+		return new_array_value(replicate_array(as_array(lhs), amnt));
 
 	default:
 		die("can only multiply numbers, strings, and arrays.");

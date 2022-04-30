@@ -17,7 +17,7 @@ function *new_function(char *name, unsigned argc, char **argv, ast_block *body) 
 	return func;
 }
 
-void dealloc_function(function *func) {
+void deallocate_function(function *func) {
 	assert(func->refcount == 0);
 
 	for (unsigned i = 0; i < func->argc; i++)

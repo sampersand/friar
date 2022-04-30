@@ -16,12 +16,12 @@ static inline array *new_array2(value *elements, unsigned length) {
 	return new_array3(elements, length, length);
 }
 
-static inline array *alloc_array(unsigned capacity) {
+static inline array *allocate_array(unsigned capacity) {
 	value *elements = xmalloc(sizeof(value) * capacity);
 	return new_array3(elements, 0, capacity);
 }
 
-void dealloc_array(array *ary);
+void deallocate_array(array *ary);
 
 static inline void free_array(array *ary) {
 #ifndef WE_SOLVED_FREE_ISSUES
@@ -32,7 +32,7 @@ static inline void free_array(array *ary) {
 
 	ary->refcount--;
 	if (ary->refcount == 0)
-		dealloc_array(ary);
+		deallocate_array(ary);
 }
 
 static inline array *clone_array(array *ary) {
@@ -46,3 +46,4 @@ void index_assign_array(array *ary, int idx, value val);
 array *add_arrays(array *lhs, array *rhs);
 int compare_arrays(const array *lhs, const array *rhs);
 bool equate_arrays(const array *lhs, const array *rhs);
+array *replicate_array(array *ary, unsigned amnt);

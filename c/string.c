@@ -14,7 +14,7 @@ string *new_string2(char *ptr, unsigned length) {
 	return str;
 }
 
-void dealloc_string(string *str) {
+void deallocate_string(string *str) {
 	assert(str->refcount == 0);
 
 	free(str->ptr);
@@ -28,7 +28,7 @@ string *index_string(const string *str, int idx) {
 	if (str->length <= idx)
 		return NULL;
 
-	string *ret = alloc_string(1);
+	string *ret = allocate_string(1);
 	ret->ptr[0] = str->ptr[idx];
 	ret->ptr[1] = '\0';
 
@@ -39,7 +39,7 @@ string *add_strings(string *lhs, string *rhs) {
 	if (lhs->length == 0) return clone_string(rhs);
 	if (rhs->length == 0) return clone_string(lhs);
 
-	string *str = alloc_string(lhs->length + rhs->length);
+	string *str = allocate_string(lhs->length + rhs->length);
 	memcpy(str->ptr, lhs->ptr, lhs->length);
 	memcpy(str->ptr + lhs->length, rhs->ptr, rhs->length + 1); // `+1` for `\0`.
 
@@ -52,13 +52,17 @@ int compare_strings(const string *lhs, const string *rhs) {
 	return cmp < 0 ? -1 : cmp == 0 ? 0 : 1;
 }
 
-string *replicate_strings(string *str, unsigned amnt) {
+string *replicate_string(string *str, unsigned amnt) {
 	if (amnt == 1)
 		return clone_string(str);
 
-	string *ret = alloc_string(str->length * amnt);
+	string *ret = allocate_string(str->length * amnt);
 
-	for (unsigned i = 0; i < amnt; i++) {
+	for (unsigned i = 0; i < amnt; i++)
+		memcpy(ret->ptr + i*str->length, str->ptr, str->length);
 
-	}
+	ret->length = str->length * amnt;
+	ret->ptr[ret->length] = '\0';
+
+	return ret;
 }
