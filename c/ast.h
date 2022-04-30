@@ -25,7 +25,7 @@ typedef struct ast_primary {
 typedef struct ast_expression {
 	enum { AST_ASSIGN, AST_IDX_ASSIGN, AST_BINOP, AST_PRIM } kind;
 
-	token_kind binop;
+	token_kind binop; // used for binop and also assignments
 	struct ast_expression *index, *rhs; // index used for index assign ; rhs used for both assigns and binop
 	union {
 		struct ast_primary *prim; // used in binop and idx assign

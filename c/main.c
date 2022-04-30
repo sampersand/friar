@@ -16,8 +16,6 @@ int main(int argc, char **argv) {
 	if ((v = lookup_global_var(&env, "main")) == VUNDEF)
 		die("you must define a `main` function");
 
-	dump_value(stdout, v);putchar('\n');
-
 	call_value(v, 0, 0, &env);
 	free_environment(&env);
 }

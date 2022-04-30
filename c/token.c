@@ -11,14 +11,14 @@ tokenizer new_tokenizer(const char *stream) {
 	return (tokenizer) {
 		.stream = stream,
 		.lineno = 1,
-		.prev = (token) { .kind = TK_EOF }
+		.prev = (token) { .kind = TK_UNDEFINED }
 	};
 }
 
 #define parse_error(tzr, msg, ...) (die(\
 	"invalid syntax at %d: " msg, tzr->lineno, __VA_ARGS__))
 
-static char peek(tokenizer *tzr) {
+static char peek(const tokenizer *tzr) {
 	return tzr->stream[0];
 }
 
@@ -29,7 +29,13 @@ static void advance(tokenizer *tzr) {
 	tzr->stream++;
 }
 
-static token parse_integer(tokenizer *tzr) {
+static char peek_advance(tokenizer *tzr) {
+	char peeked = peek(tzr);
+	advance(tzr);
+	return peeked;
+}
+
+static token parse_number(tokenizer *tzr) {
 	number num = 0;
 	char c;
 
@@ -41,7 +47,7 @@ static token parse_integer(tokenizer *tzr) {
 	if (isalnum(c) || c == '_')
 		parse_error(tzr, "bad character '%c' after integer literal", c);
 
-	return (token) { .kind = TK_LITERAL, .v = new_number_value(num) };
+	return (token) { .kind = TK_LITERAL, .val = new_number_value(num) };
 }
 
 static bool isalnum_or_underscore(char c) {
@@ -57,9 +63,9 @@ static token parse_identifier(tokenizer *tzr) {
 	unsigned length = tzr->stream - start;
 
 	// check for predefined identifiers
-	if (!strncmp(start, "true", length)) return (token) { .kind = TK_LITERAL, .v = VTRUE };
-	if (!strncmp(start, "false", length)) return (token) { .kind = TK_LITERAL, .v = VFALSE };
-	if (!strncmp(start, "null", length)) return (token) { .kind = TK_LITERAL, .v = VNULL };
+	if (!strncmp(start, "true", length)) return (token) { .kind = TK_LITERAL, .val = VTRUE };
+	if (!strncmp(start, "false", length)) return (token) { .kind = TK_LITERAL, .val = VFALSE };
+	if (!strncmp(start, "null", length)) return (token) { .kind = TK_LITERAL, .val = VNULL };
 	if (!strncmp(start, "global", length)) return (token) { .kind = TK_GLOBAL };
 	if (!strncmp(start, "function", length)) return (token) { .kind = TK_FUNCTION };
 	if (!strncmp(start, "if", length)) return (token) { .kind = TK_IF };
@@ -70,7 +76,7 @@ static token parse_identifier(tokenizer *tzr) {
 	if (!strncmp(start, "return", length)) return (token) { .kind = TK_RETURN };
 
 	// it's a normal identifier, retunr that.
-	return (token) { .kind = TK_IDENT, .str = strndup(start, length) };
+	return (token) { .kind = TK_IDENTIFIER, .str = strndup(start, length) };
 }
 
 static int parse_hex(tokenizer *tzr, char c) {
@@ -86,159 +92,236 @@ static int parse_hex(tokenizer *tzr, char c) {
 	parse_error(tzr, "unknown hex digit '%c'", c);
 }
 
+static char get_escape_char(tokenizer *tzr) {
+	char c = peek_advance(tzr);
+	switch (c) {
+	case '\'':
+	case '\"':
+	case '\\': return c;
+	case 'n': return '\n';
+	case 't': return '\t';
+	case 'r': return '\r';
+	case 'f': return '\f';
+	case '0': return '\0';
+
+	case 'x':
+		if (tzr->stream[0] == '\0' || tzr->stream[1] == '\0')
+			parse_error(tzr, "unterminated '\\x' sequence encountered %s", "");
+
+		char upper_nibble = peek_advance(tzr);
+		char lower_nibble = peek_advance(tzr);
+		
+		return (parse_hex(tzr, upper_nibble) << 4) + parse_hex(tzr, lower_nibble);
+
+	default:
+		parse_error(tzr, "unknown escape character '%c'", c);
+	}
+}
+
 static token parse_string(tokenizer *tzr) {
-	char quote = peek(tzr);
-	advance(tzr);
+	char quote = peek_advance(tzr);
 	assert(quote == '\'' || quote == '\"');
 
-	const char *start = tzr->stream;
-	bool was_anything_escaped = false;
+	unsigned length = 0;
+	unsigned capacity = 8;
+	char *str = xmalloc(capacity + 1); // `+1` for the trailing `\0`.
+
 	int starting_line = tzr->lineno;
 
 	char c;
-	do {
-		c = peek(tzr);
-
+	while ((c = peek_advance(tzr)) != quote) {
 		if (c == '\0')
-			parse_error(tzr, "unterminated quote encountered started on %d", starting_line);
+			parse_error(tzr, "unterminated quote encountered starting on line %d", starting_line);
 
-		if (c == '\\') {
-			was_anything_escaped = true;
-			advance(tzr);
+		if (c == '\\')
+			c = get_escape_char(tzr);
 
-			if (peek(tzr) == '\0')
-				parse_error(tzr, "unterminated escape sequence of string started on %d", starting_line);
+		if (length == capacity) {
+			capacity *= 2;
+			str = xrealloc(str, capacity + 1);
 		}
 
-		advance(tzr);
-	} while (c != quote);
-
-	// We need the `- 1` as it'll exclude the closing quote.
-	unsigned length = tzr->stream - start - 1;
-
-	// simple case, just return the original string.
-	if (!was_anything_escaped) {
-		return (token) {
-			.kind = TK_LITERAL,
-			.v = new_string_value(new_string2(strndup(start, length), length))
-		};
+		str[length++] = c;
 	}
 
-	// well, something was escaped, so we now need to deal with that.
-	char *return_string = malloc(length); // note not `+1`, as we're removing at least 1 slash.
-	int i = 0, stridx = 0;
-	char *str = return_string;
+	str = xrealloc(str, length + 1);
+	str[length] = '\0';
 
-	while (i < length) {
-		if (start[i] != '\\') {
-			str[stridx++] = start[i++];
+	return (token) {
+		.kind = TK_LITERAL,
+		.val = new_string_value(new_string2(str, length))
+	};
+}
+
+static void strip_leading_whitespace_and_comments(tokenizer *tzr) {
+	char c;
+
+	while ((c = peek(tzr)) != '\0') {
+		// if `c` is a whitespace character, then just discard it.
+		if (isspace(c)) {
+			advance(tzr);
 			continue;
 		}
 
-		char c = start[++i];
+		// briar only has line comments
+		if (c == '/' && tzr->stream[1] == '/') {
+			while (c != '\0' && c != '\n')
+				c = peek_advance(tzr);
 
-		if (quote == '\'') {
-			if (c != '\\' && c != '\"' && c != '\'')
-				str[stridx++] = '\\';
-		} else {
-			switch (c) {
-			case '\'': case '\"': case '\\': break;
-			case 'n': c = '\n'; break;
-			case 't': c = '\t'; break;
-			case 'r': c = '\r'; break;
-			case 'f': c = '\f'; break;
-			case '0': c = '\0'; break;
-			case 'x':
-				i += 3;
-				c = (parse_hex(tzr, start[i-2]) << 4) + parse_hex(tzr, start[i-1]);
-				break;
-			default:
-				parse_error(tzr, "unknown escape character '%c'", c);
-			}
+			continue;
 		}
 
-		str[stridx++] = c;
-		i++;
+		break;
+	}
+}
+
+static bool advance_if_equal(tokenizer *tzr) {
+	if (peek(tzr) == '=') {
+		advance(tzr);
+		return true;
 	}
 
-	str[stridx] = '\0';
-	return (token) { .kind = TK_LITERAL, .v = new_string_value(new_string1(str)) };
+	return false;
 }
 
 token next_token(tokenizer *tzr) {
-	char c;
+	strip_leading_whitespace_and_comments(tzr);
+	char c = peek(tzr);
 
-	// Strip whitespace and comments.
-	for (; (c = peek(tzr)); advance(tzr)) {
-		if (c == '#')
-			do {
-				advance(tzr);
-			} while ((c = peek(tzr)) && c != '\n');
+	if (c == '\0')
+		return (token) { .kind = TK_UNDEFINED };
 
-		if (!isspace(c))
-			break;
-	}
+	if (isdigit(c))
+		return parse_number(tzr);
 
-	// For simple tokens, just return them.
+	if (isalpha(c) || c == '_')
+		return parse_identifier(tzr);
+
+	if (c == '\'' || c == '\"')
+		return parse_string(tzr);
+
+	// We don't want to advance before calling the previous parser kinds.
+	advance(tzr);
+
 	switch (c) {
-	case '=': case '!': case '<': case '>':
-		if (tzr->stream[1] == '=')
-			tzr->stream++, c += 0x80;
+	// Simple tokens
+	case '(': return (token) { .kind = TK_LPAREN };
+ 	case ')': return (token) { .kind = TK_RPAREN };
+	case '[': return (token) { .kind = TK_LBRACKET };
+	case ']': return (token) { .kind = TK_RBRACKET };
+	case '{': return (token) { .kind = TK_LBRACE };
+	case '}': return (token) { .kind = TK_RBRACE };
+	case ',': return (token) { .kind = TK_COMMA };
+	case ';': return (token) { .kind = TK_SEMICOLON };
 
-		// fallthrough
-	case '(': case ')': case '[': case ']': case '{': case '}':
-	case '+': case '-': case '*': case '/': case '%':
-	case ',': case ';': 
-		advance(tzr);
-		// fallthru
+	// compound tokens
+	case '&':
+		if ((c = peek_advance(tzr)) != '&')
+			parse_error(tzr, "only `&&` is recognized, not `&%c`", c);
+		return (token) { .kind = TK_AND_AND };
 
-	case '\0':
-		return (token) { .kind = c };
+	case '|':
+		if ((c = peek_advance(tzr)) != '|')
+			parse_error(tzr, "only `||` is recognized, not `|%c`", c);
+		return (token) { .kind = TK_OR_OR };
+
+	case '=':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_EQUAL : TK_ASSIGN
+		};
+
+	case '!':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_NOT_EQUAL : TK_NOT
+		};
+
+	case '<':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_LESS_THAN_OR_EQUAL : TK_LESS_THAN
+		};
+
+	case '>':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_GREATER_THAN_OR_EQUAL : TK_GREATER_THAN
+		};
+
+	case '+':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_ADD_ASSIGN : TK_ADD
+		};
+
+	case '-':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_SUBTRACT_ASSIGN : TK_SUBTRACT
+		};
+
+	case '*':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_MULTIPLY_ASSIGN : TK_MULTIPLY
+		};
+
+	case '/':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_DIVIDE_ASSIGN : TK_DIVIDE
+		};
+
+	case '%':
+		return (token) {
+			.kind = advance_if_equal(tzr) ? TK_MODULO_ASSIGN : TK_MODULO
+		};
+
+	default:
+		parse_error(tzr, "unknown token start: '%c' (%02x)", c, c);
 	}
-
-	// for more complicated ones, defer to their functions.
-	if (isdigit(c)) return parse_integer(tzr);
-	if (isalpha(c) || c == '_') return parse_identifier(tzr);
-	if (c == '\'' || c == '\"') return parse_string(tzr);
-
-	parse_error(tzr, "unknown token start: '%c'", c);
 }
-
 
 void dump_token(FILE *out, token tkn) {
 	switch(tkn.kind) {
-	case TK_EOF: fprintf(out, "EOF\n"); break;
-	case TK_LITERAL: dump_value(out, tkn.v); break;
-	case TK_IDENT: fprintf(out, "Ident(%s)\n", tkn.str); break;
-	case TK_GLOBAL: fprintf(out, "Token(global)\n"); break;
-	case TK_FUNCTION: fprintf(out, "Token(function)\n"); break;
-	case TK_IF: fprintf(out, "Token(if)\n"); break;
-	case TK_ELSE: fprintf(out, "Token(else)\n"); break;
-	case TK_WHILE: fprintf(out, "Token(while)\n"); break;
-	case TK_BREAK: fprintf(out, "Token(break)\n"); break;
-	case TK_CONTINUE: fprintf(out, "Token(continue)\n"); break;
-	case TK_RETURN: fprintf(out, "Token(return)\n"); break;
-	case TK_LPAREN: fprintf(out, "Token[(]\n"); break;
-	case TK_RPAREN: fprintf(out, "Token[)]\n"); break;
-	case TK_LBRACKET: fprintf(out, "Token([)\n"); break;
-	case TK_RBRACKET: fprintf(out, "Token(])\n"); break;
-	case TK_LBRACE: fprintf(out, "Token({)\n"); break;
-	case TK_RBRACE: fprintf(out, "Token(})\n"); break;
-	case TK_ASSIGN: fprintf(out, "Token(=)\n"); break;
-	case TK_COMMA: fprintf(out, "Token(,)\n"); break;
-	case TK_SEMICOLON: fprintf(out, "Token(;)\n"); break;
-	case TK_ADD: fprintf(out, "Token(+)\n"); break;
-	case TK_SUB: fprintf(out, "Token(-)\n"); break;
-	case TK_MUL: fprintf(out, "Token(*)\n"); break;
-	case TK_DIV: fprintf(out, "Token(/)\n"); break;
-	case TK_MOD: fprintf(out, "Token(%%)\n"); break;
-	case TK_NOT: fprintf(out, "Token(!)\n"); break;
-	case TK_LTH: fprintf(out, "Token(<)\n"); break;
-	case TK_GTH: fprintf(out, "Token(>)\n"); break;
-	case TK_LEQ: fprintf(out, "Token(<=)\n"); break;
-	case TK_GEQ: fprintf(out, "Token(>=)\n"); break;
-	case TK_EQL: fprintf(out, "Token(==)\n"); break;
-	case TK_NEQ: fprintf(out, "Token(!=)\n"); break;
-	default: fprintf(out, "Token(<%d>)\n", tkn.kind); break;
+	case TK_UNDEFINED: fputs("UNDEF", out); break;
+
+	case TK_LITERAL: dump_value(out, tkn.val); break;
+	case TK_IDENTIFIER: fprintf(out, "Identifier(%s)\n", tkn.str); break;
+
+	case TK_GLOBAL: fputs("Keyword(global)", out); break;
+	case TK_FUNCTION: fputs("Keyword(function)", out); break;
+	case TK_IF: fputs("Keyword(if)", out); break;
+	case TK_ELSE: fputs("Keyword(else)", out); break;
+	case TK_WHILE: fputs("Keyword(while)", out); break;
+	case TK_BREAK: fputs("Keyword(break)", out); break;
+	case TK_CONTINUE: fputs("Keyword(continue)", out); break;
+	case TK_RETURN: fputs("Keyword(return)", out); break;
+
+	case TK_LPAREN: fputs("Token('(')", out); break;
+	case TK_RPAREN: fputs("Token(')')", out); break;
+	case TK_LBRACKET: fputs("Token('[')", out); break;
+	case TK_RBRACKET: fputs("Token(']')", out); break;
+	case TK_LBRACE: fputs("Token('{')", out); break;
+	case TK_RBRACE: fputs("Token('}')", out); break;
+	case TK_COMMA: fputs("Token(',')", out); break;
+	case TK_SEMICOLON: fputs("Token(';')", out); break;
+	case TK_ASSIGN: fputs("Token('=')", out); break;
+
+	case TK_ADD: fputs("Token('+')", out); break;
+	case TK_SUBTRACT: fputs("Token('-')", out); break;
+	case TK_MULTIPLY: fputs("Token('*')", out); break;
+	case TK_DIVIDE: fputs("Token('/')", out); break;
+	case TK_MODULO: fputs("Token('%')", out); break;
+
+	case TK_ADD_ASSIGN: fputs("Token('+=')", out); break;
+	case TK_SUBTRACT_ASSIGN: fputs("Token('-=')", out); break;
+	case TK_MULTIPLY_ASSIGN: fputs("Token('*=')", out); break;
+	case TK_DIVIDE_ASSIGN: fputs("Token('/=')", out); break;
+	case TK_MODULO_ASSIGN: fputs("Token('%=')", out); break;
+
+	case TK_AND_AND: fputs("Token('&&')", out); break;
+	case TK_OR_OR: fputs("Token('||')", out); break;
+
+	case TK_NOT: fputs("Token('!')", out); break;
+	case TK_EQUAL: fputs("Token('==')", out); break;
+	case TK_NOT_EQUAL: fputs("Token('!=')", out); break;
+	case TK_LESS_THAN: fputs("Token('<')", out); break;
+	case TK_LESS_THAN_OR_EQUAL: fputs("Token('<=')", out); break;
+	case TK_GREATER_THAN: fputs("Token('>')", out); break;
+	case TK_GREATER_THAN_OR_EQUAL: fputs("Token('>=')", out); break;
 	}
 }

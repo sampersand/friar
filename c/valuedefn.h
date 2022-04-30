@@ -11,7 +11,7 @@ XX...000 = string
 XX...001 = function
 XX...010 = ary
 */
-typedef long long value;
+typedef unsigned long long value;
 
 #define VFALSE 0
 #define VNULL 1

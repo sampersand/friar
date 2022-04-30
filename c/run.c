@@ -36,6 +36,8 @@ value run_primary(ast_primary *prim, environment *e){
 		else if (prim->prim->kind == AST_VAR && !strcmp(prim->prim->ident, "push")) kind = 2;
 		else if (prim->prim->kind == AST_VAR && !strcmp(prim->prim->ident, "pop")) kind = 3;
 		else if (prim->prim->kind == AST_VAR && !strcmp(prim->prim->ident, "length")) kind = 4;
+		else if (prim->prim->kind == AST_VAR && !strcmp(prim->prim->ident, "exit")) kind = 5;
+		else if (prim->prim->kind == AST_VAR && !strcmp(prim->prim->ident, "kindof")) kind = 6;
 		else v1 = run_primary(prim->prim, e);
 
 		value args[prim->amnt+1]; // `+1` is bc you cant have zero-sized vla
@@ -47,10 +49,16 @@ value run_primary(ast_primary *prim, environment *e){
 		case 1: printf("%s\n", as_string(args[0])->ptr); return VNULL;
 		case 2: case 3:
 			die("todo(fncall)");
+
+		case 5:
+			exit(as_number(args[0]));
+
+		case 6:
+			return new_string_value(new_string1(strdup(value_name(args[0]))));
+
 		case 4:
 			switch (classify(args[0])) {
 			case VK_STRING:
-				printf("yup\n");
 				return new_number_value(as_string(args[0])->length);
 			case VK_ARRAY:
 				return new_number_value(as_array(args[0])->length);
@@ -70,7 +78,7 @@ value run_primary(ast_primary *prim, environment *e){
 		v1 = run_primary(prim->prim, e);
 		if (v1 != VTRUE && v1 != VFALSE && v1 != VNULL)
 			die("can only logically negate booleans, not %llx", v1);
-		return v1 != VTRUE;
+		return new_boolean_value(!as_boolean(v1));
 
 	case AST_ARY:;
 		array *a = malloc(sizeof(array));
@@ -93,10 +101,28 @@ value run_expression(ast_expression *expr, environment *e){
 	value v, v2, v3;
 	switch (expr->kind) {
 	case AST_ASSIGN:
-		assign_var(e, expr->name, v = run_expression(expr->rhs, e));
+		if (expr->binop == TK_ASSIGN) {
+			v = run_expression(expr->rhs, e);
+		} else {
+			if ((v = lookup_var(e, expr->name)) == VUNDEF)
+				die("undefined variable '%s' accessed", expr->name);
+			v2 = run_expression(expr->rhs, e);
+			switch (expr->binop) {
+			case TK_ADD_ASSIGN: v = add_values(v, v2); break;
+			case TK_SUBTRACT_ASSIGN: v = sub_values(v, v2); break;
+			case TK_MULTIPLY_ASSIGN: v = mul_values(v, v2); break;
+			case TK_DIVIDE_ASSIGN: v = div_values(v, v2); break;
+			case TK_MODULO_ASSIGN: v = mod_values(v, v2); break;
+			default: die("[bug] unknown binop %d", expr->binop);
+			}
+		}
+		assign_var(e, expr->name, v);
 		return v;
 
 	case AST_IDX_ASSIGN:
+		if (expr->binop != TK_ASSIGN)
+			die("todo: non-tk-assign for arrays");
+
 		v = run_primary(expr->prim, e);
 		v2 = run_expression(expr->index, e);
 		v3 = run_expression(expr->rhs, e);
@@ -111,16 +137,16 @@ value run_expression(ast_expression *expr, environment *e){
 		v2 = run_expression(expr->rhs, e);
 		switch (expr->binop) {
 		case TK_ADD: return add_values(v, v2);
-		case TK_SUB: return sub_values(v, v2);
-		case TK_MUL: return mul_values(v, v2);
-		case TK_DIV: return div_values(v, v2);
-		case TK_MOD: return mod_values(v, v2);
-		case TK_LTH: return new_boolean_value(compare_values(v, v2) < 0);
-		case TK_GTH: return new_boolean_value(compare_values(v, v2) > 0);
-		case TK_LEQ: return new_boolean_value(compare_values(v, v2) <= 0);
-		case TK_GEQ: return new_boolean_value(compare_values(v, v2) >= 0);
-		case TK_EQL: return new_boolean_value(equate_values(v, v2));
-		case TK_NEQ: return new_boolean_value(!equate_values(v, v2));
+		case TK_SUBTRACT: return sub_values(v, v2);
+		case TK_MULTIPLY: return mul_values(v, v2);
+		case TK_DIVIDE: return div_values(v, v2);
+		case TK_MODULO: return mod_values(v, v2);
+		case TK_LESS_THAN: return new_boolean_value(compare_values(v, v2) < 0);
+		case TK_GREATER_THAN: return new_boolean_value(compare_values(v, v2) > 0);
+		case TK_LESS_THAN_OR_EQUAL: return new_boolean_value(compare_values(v, v2) <= 0);
+		case TK_GREATER_THAN_OR_EQUAL: return new_boolean_value(compare_values(v, v2) >= 0);
+		case TK_EQUAL: return new_boolean_value(equate_values(v, v2));
+		case TK_NOT_EQUAL: return new_boolean_value(!equate_values(v, v2));
 		default: die("[bug] unknown operator %d encountered", expr->binop);
 		}
 	}

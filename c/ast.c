@@ -14,7 +14,7 @@ token peek(tokenizer *tzr) {
 
 token advance(tokenizer *tzr) {
 	token tkn = peek(tzr);
-	tzr->prev.kind = TK_EOF;
+	tzr->prev.kind = TK_UNDEFINED;
 	return tkn;
 }
 
@@ -24,7 +24,7 @@ void unadvance(tokenizer *tzr, token tkn) {
 }
 
 token guard(tokenizer *tzr, token_kind k) {
-	return peek(tzr).kind == k ? advance(tzr) : (token) { .kind = TK_EOF };
+	return peek(tzr).kind == k ? advance(tzr) : (token) { .kind = TK_UNDEFINED };
 }
 
 token expect(tokenizer *tzr, token_kind k) {
@@ -72,21 +72,21 @@ again:
 		}
 		break;
 
-	case TK_SUB:
+	case TK_SUBTRACT:
 	case TK_NOT:
-		prim->kind = tkn.kind == TK_SUB ? AST_NEG : AST_NOT;
+		prim->kind = tkn.kind == TK_SUBTRACT ? AST_NEG : AST_NOT;
 		if (!(prim->prim = parse_primary(tzr)))
 			UNEXPECTED_TOKEN(tzr, peek(tzr));
 		break;
 
-	case TK_IDENT:
+	case TK_IDENTIFIER:
 		prim->kind = AST_VAR;
 		prim->ident = tkn.str;
 		break;
 
 	case TK_LITERAL:
 		prim->kind = AST_LITERAL;
-		prim->value = tkn.v;
+		prim->value = tkn.val;
 		break;
 
 	default:
@@ -141,7 +141,14 @@ static ast_expression *parse_expression(tokenizer *tzr) {
 
 	token tkn;
 	switch ((tkn = advance(tzr)).kind) {
+	case TK_ADD_ASSIGN:
+	case TK_SUBTRACT_ASSIGN:
+	case TK_MULTIPLY_ASSIGN:
+	case TK_DIVIDE_ASSIGN:
+	case TK_MODULO_ASSIGN:
 	case TK_ASSIGN:
+		expr->binop = tkn.kind;
+
 		if (expr->prim->kind == AST_VAR) {
 			expr->kind = AST_ASSIGN;
 			char *name = expr->prim->ident;
@@ -159,8 +166,8 @@ static ast_expression *parse_expression(tokenizer *tzr) {
 			UNEXPECTED_TOKEN(tzr, peek(tzr));
 		break;
 
-	case TK_ADD: case TK_SUB: case TK_MUL: case TK_DIV: case TK_MOD: case TK_NOT:
-	case TK_LTH: case TK_GTH: case TK_LEQ: case TK_GEQ: case TK_EQL: case TK_NEQ:
+	case TK_ADD: case TK_SUBTRACT: case TK_MULTIPLY: case TK_DIVIDE: case TK_MODULO: case TK_NOT:
+	case TK_LESS_THAN: case TK_GREATER_THAN: case TK_LESS_THAN_OR_EQUAL: case TK_GREATER_THAN_OR_EQUAL: case TK_EQUAL: case TK_NOT_EQUAL:
 		expr->kind = AST_BINOP;
 		expr->binop = tkn.kind;
 		if (!(expr->rhs = parse_expression(tzr)))
@@ -248,7 +255,7 @@ static ast_block *parse_block(tokenizer *tzr) {
 static ast_declaration *parse_global(tokenizer *tzr) {
 	ast_declaration *decl = malloc(sizeof(ast_declaration));
 	decl->kind = AST_GLOBAL;
-	decl->name = expect(tzr, TK_IDENT).str;
+	decl->name = expect(tzr, TK_IDENTIFIER).str;
 	expect(tzr, TK_SEMICOLON);
 	return decl;
 }
@@ -256,7 +263,7 @@ static ast_declaration *parse_global(tokenizer *tzr) {
 static ast_declaration *parse_function(tokenizer *tzr) {
 	ast_declaration *decl = malloc(sizeof(ast_declaration));
 	decl->kind = AST_FUNCTION;
-	decl->name = expect(tzr, TK_IDENT).str;
+	decl->name = expect(tzr, TK_IDENTIFIER).str;
 	expect(tzr, TK_LPAREN);
 
 	int cap = 4;
@@ -266,7 +273,7 @@ static ast_declaration *parse_function(tokenizer *tzr) {
 		if (decl->argc == cap)
 			decl->args = realloc(decl->args, (cap *= 2)*sizeof(char*));
 
-		decl->args[decl->argc++] = expect(tzr, TK_IDENT).str;
+		decl->args[decl->argc++] = expect(tzr, TK_IDENTIFIER).str;
 		if (!guard(tzr, TK_COMMA).kind) {
 			expect(tzr, TK_RPAREN);
 			break;
@@ -285,7 +292,7 @@ ast_declaration *next_declaration(tokenizer *tzr) {
 		return parse_global(tzr);
 	case TK_FUNCTION:
 		return parse_function(tzr);
-	case TK_EOF:
+	case TK_UNDEFINED:
 		return 0;
 	default:
 		UNEXPECTED_TOKEN(tzr, tkn);

@@ -59,7 +59,7 @@ static inline value new_array_value(array *ary) {
 }
 
 static inline value new_number_value(number num) {
-	return (num << 3) | TAG_NUMBER;
+	return ((value) num << 3) | TAG_NUMBER;
 }
 
 static inline value new_string_value(string *str) {
