@@ -3,6 +3,7 @@
 void *xmalloc(size_t size) {
 	void *ptr = malloc(size);
 
+	// If a zero size is given, `malloc` is allowed to return `NULL`.
 	if (size != 0 && ptr == NULL)
 		die("allocation error, unable to allocate to %zu bytes", size);
 
@@ -10,10 +11,11 @@ void *xmalloc(size_t size) {
 }
 
 void *xrealloc(void *ptr, size_t size) {
-	void *retptr = realloc(ptr, size);
+	ptr = realloc(ptr, size);
 
-	if (ptr != NULL && size != 0 && retptr == NULL)
+	// If a zero size is given, `realloc` is allowed to return `NULL`.
+	if (size != 0 && ptr == NULL)
 		die("allocation error, unable to reallocate to %zu bytes", size);
 
-	return retptr;
+	return ptr;
 }

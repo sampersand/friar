@@ -144,3 +144,4 @@ bool equate_values(value lhs, value rhs);
 void free_value(value val);
 value clone_value(value val);
 
+string *value_to_string(value val);

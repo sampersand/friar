@@ -91,12 +91,12 @@ value clone_value(value val) {
 
 const char *value_kind_name(value_kind kind) {
 	switch (kind) {
-	case VK_BOOLEAN: return "boolean";
-	case VK_NULL: return "null";
-	case VK_STRING: return "string";
+	case VK_BOOLEAN:  return "boolean";
+	case VK_NULL:     return "null";
+	case VK_STRING:   return "string";
 	case VK_FUNCTION: return "function";
-	case VK_ARRAY: return "array";
-	case VK_NUMBER: return "number";
+	case VK_ARRAY:    return "array";
+	case VK_NUMBER:   return "number";
 	}
 }
 
@@ -128,7 +128,7 @@ value index_value(value val, value idx) {
 		string *str = index_string(as_string(val), num_idx);
 
 		if (str == NULL) {
-			die("index %lld is out of bounds for string length %u",
+			die("index %lld is out of bounds for string of length %u",
 				num_idx, as_string(val)->length);
 		}
 
@@ -138,7 +138,7 @@ value index_value(value val, value idx) {
 		value ret = index_array(as_array(val), num_idx);
 
 		if (ret == VUNDEF) {
-			die("index %lld is out of bounds for array length %u",
+			die("index %lld is out of bounds for array of length %u",
 				num_idx, as_array(val)->length);
 		}
 
@@ -163,27 +163,24 @@ value not_value(value val) {
 	return new_number_value(!as_boolean(val));
 }
 
-string *to_string(value val) {
+string *value_to_string(value val) {
 	switch (classify(val)) {
 	case VK_STRING:
 		return clone_string(as_string(val));
 
+	case VK_NUMBER:
+		return number_to_string(as_number(num));
+
+	// `new_string2` requires ownership of its string, so we `strdup`.
+	case VK_BOOLEAN:
+		if (val == VTRUE) {
+			return new_string2(strdup("true"), 4);
+		} else {
+			return new_string2(strdup("false"), 5);
+		}
+
 	case VK_NULL:
 		return new_string2(strdup("null"), 4);
-
-	case VK_BOOLEAN:
-		if (val == VTRUE)
-			return new_string2(strdup("true"), 4);
-		else
-			return new_string2(strdup("false"), 5);
-
-	case VK_NUMBER: {
-		// lol there must be a better way to do this
-		string *str = allocate_string(47); // length of LONG_LONG_MIN
-		sprintf(str->ptr, "%lld", as_number(val));
-		str->length = strlen(str->ptr);
-		return str;
-	}
 
 	default:
 		die("cannot no conversion to string defined for %s", value_name(val));
@@ -191,13 +188,14 @@ string *to_string(value val) {
 }
 
 value add_values(value lhs, value rhs) {
-	// add strings together
+	// If either side is a string, we convert both to strings then add.
 	if (is_string(lhs) || is_string(rhs))
 		goto string;
 
-	if (classify(lhs) != classify(rhs))
+	if (classify(lhs) != classify(rhs)) {
 		die("can only add like kinds together, or strings to other types, not %s to %s",
 			value_name(lhs), value_name(rhs));
+	}
 
 	switch (classify(lhs)) {
 	case VK_NUMBER:
@@ -208,8 +206,8 @@ value add_values(value lhs, value rhs) {
 
 	case VK_STRING:
 	string: {
-		string *l = to_string(lhs);
-		string *r = to_string(rhs);
+		string *l = value_to_string(lhs);
+		string *r = value_to_string(rhs);
 		string *ret = add_strings(l, r);
 
 		free_string(l);
@@ -232,7 +230,7 @@ value subtract_values(value lhs, value rhs) {
 
 value multiply_values(value lhs, value rhs) {
 	if (!is_number(rhs))  {
-		die("can only multiply numbers, strings, and arrays by numbers, not %s",
+		die("can only multiply numbers, strings, and arrays by numbers, not %ss",
 			value_name(rhs));
 	}
 
@@ -263,6 +261,9 @@ value divide_values(value lhs, value rhs) {
 	if (!is_number(lhs) || !is_number(rhs))
 		die("can only divide numbers from numbers");
 
+	if (as_number(rhs) == 0)
+		die("division by zero!");
+
 	return new_number_value(as_number(lhs) / as_number(rhs));
 }
 
@@ -270,13 +271,17 @@ value modulo_values(value lhs, value rhs) {
 	if (!is_number(lhs) || !is_number(rhs))
 		die("can only modulo numbers with numbers");
 
+	if (as_number(rhs) == 0)
+		die("modulo by zero!");
+
 	return new_number_value(as_number(lhs) % as_number(rhs));
 }
 
 int compare_values(value lhs, value rhs) {
-	if (classify(lhs) != classify(rhs))
+	if (classify(lhs) != classify(rhs)) {
 		die("can only compare like kinds together, not %s to %s",
 			value_name(lhs), value_name(rhs));
+	}
 
 	switch (classify(lhs)) {
 	case VK_NUMBER:
