@@ -84,10 +84,10 @@ static int parse_hex(tokenizer *tzr, char c) {
 		return c - '0';
 
 	if ('a' <= c && c <= 'f')
-		return c - 'a' + 10;
+		return (c - 'a') + 10;
 
 	if ('A' <= c && c <= 'F')
-		return c - 'F' + 10;
+		return (c - 'A') + 10;
 
 	parse_error(tzr, "unknown hex digit '%c'", c);
 }

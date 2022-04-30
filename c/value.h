@@ -131,13 +131,13 @@ void index_assign(value ary, value idx, value val);
 value index_into(value ary, value idx);
 value call_value(value v, int argc, value *argv, environment *e);
 
-value neg_value(value val);
+value negate_value(value val);
 value not_value(value val);
 value add_values(value lhs, value rhs);
-value sub_values(value lhs, value rhs);
-value mul_values(value lhs, value rhs);
-value div_values(value lhs, value rhs);
-value mod_values(value lhs, value rhs);
+value subtract_values(value lhs, value rhs);
+value multiply_values(value lhs, value rhs);
+value divide_values(value lhs, value rhs);
+value modulo_values(value lhs, value rhs);
 int compare_values(value lhs, value rhs);
 bool equate_values(value lhs, value rhs);
 

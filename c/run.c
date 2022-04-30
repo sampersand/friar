@@ -109,10 +109,10 @@ value run_expression(ast_expression *expr, environment *e){
 			v2 = run_expression(expr->rhs, e);
 			switch (expr->binop) {
 			case TK_ADD_ASSIGN: v = add_values(v, v2); break;
-			case TK_SUBTRACT_ASSIGN: v = sub_values(v, v2); break;
-			case TK_MULTIPLY_ASSIGN: v = mul_values(v, v2); break;
-			case TK_DIVIDE_ASSIGN: v = div_values(v, v2); break;
-			case TK_MODULO_ASSIGN: v = mod_values(v, v2); break;
+			case TK_SUBTRACT_ASSIGN: v = subtract_values(v, v2); break;
+			case TK_MULTIPLY_ASSIGN: v = multiply_values(v, v2); break;
+			case TK_DIVIDE_ASSIGN: v = divide_values(v, v2); break;
+			case TK_MODULO_ASSIGN: v = modulo_values(v, v2); break;
 			default: die("[bug] unknown binop %d", expr->binop);
 			}
 		}
@@ -137,10 +137,10 @@ value run_expression(ast_expression *expr, environment *e){
 		v2 = run_expression(expr->rhs, e);
 		switch (expr->binop) {
 		case TK_ADD: return add_values(v, v2);
-		case TK_SUBTRACT: return sub_values(v, v2);
-		case TK_MULTIPLY: return mul_values(v, v2);
-		case TK_DIVIDE: return div_values(v, v2);
-		case TK_MODULO: return mod_values(v, v2);
+		case TK_SUBTRACT: return subtract_values(v, v2);
+		case TK_MULTIPLY: return multiply_values(v, v2);
+		case TK_DIVIDE: return divide_values(v, v2);
+		case TK_MODULO: return modulo_values(v, v2);
 		case TK_LESS_THAN: return new_boolean_value(compare_values(v, v2) < 0);
 		case TK_GREATER_THAN: return new_boolean_value(compare_values(v, v2) > 0);
 		case TK_LESS_THAN_OR_EQUAL: return new_boolean_value(compare_values(v, v2) <= 0);

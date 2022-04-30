@@ -5,18 +5,6 @@
 
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {
-	case VK_BOOLEAN:
-		fprintf(out, "Boolean(%s)", as_boolean(val) ? "true" : "false");
-		break;
-
-	case VK_NULL:
-		fputs("Null()", out);
-		break;
-
-	case VK_STRING:
-		fprintf(out, "String(%s)", as_string(val)->ptr);
-		break;
-
 	case VK_FUNCTION: {
 		function *func = as_function(val);
 		fprintf(out, "Function(%s, args=[", func->name);
@@ -46,6 +34,18 @@ void dump_value(FILE *out, value val) {
 
 		break;
 	}
+
+	case VK_BOOLEAN:
+		fprintf(out, "Boolean(%s)", as_boolean(val) ? "true" : "false");
+		break;
+
+	case VK_NULL:
+		fputs("Null()", out);
+		break;
+
+	case VK_STRING:
+		fprintf(out, "String(%s)", as_string(val)->ptr);
+		break;
 
 	case VK_NUMBER:
 		fprintf(out, "Number(%lld)", as_number(val));
@@ -137,7 +137,7 @@ value index_into(value ary, value idx) {
 	}
 }
 
-value neg_value(value val) {
+value negate_value(value val) {
 	if (!is_number(val))
 		die("can only negate numbers, not %s", value_name(val));
 
@@ -211,28 +211,28 @@ value add_values(value lhs, value rhs) {
 	}
 }
 
-value sub_values(value lhs, value rhs) {
+value subtract_values(value lhs, value rhs) {
 	if (!is_number(lhs) || !is_number(rhs))
 		die("can only subtract numbers from numbers");
 
 	return new_number_value(as_number(lhs) - as_number(rhs));
 }
 
-value mul_values(value lhs, value rhs) {
+value multiply_values(value lhs, value rhs) {
 	if (!is_number(lhs) || !is_number(rhs))
 		die("can only multiply numbers from numbers");
 
 	return new_number_value(as_number(lhs) * as_number(rhs));
 }
 
-value div_values(value lhs, value rhs) {
+value divide_values(value lhs, value rhs) {
 	if (!is_number(lhs) || !is_number(rhs))
 		die("can only divide numbers from numbers");
 
 	return new_number_value(as_number(lhs) / as_number(rhs));
 }
 
-value mod_values(value lhs, value rhs) {
+value modulo_values(value lhs, value rhs) {
 	if (!is_number(lhs) || !is_number(rhs))
 		die("can only modulo numbers with numbers");
 
