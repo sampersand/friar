@@ -27,7 +27,7 @@ value run_primary(ast_primary *prim, environment *e){
 	case AST_INDEX:
 		v1 = run_primary(prim->prim, e);
 		v2 = run_expression(prim->expr, e);
-		return index_into(v1, v2);
+		return index_value(v1, v2);
 
 	// this is bad. 
 	case AST_FNCALL: {
@@ -41,7 +41,7 @@ value run_primary(ast_primary *prim, environment *e){
 		else v1 = run_primary(prim->prim, e);
 
 		value args[prim->amnt+1]; // `+1` is bc you cant have zero-sized vla
-		for (int i = 0; i < prim->amnt; ++i)
+		for (int i = 0; i < prim->amnt; i++)
 			args[i] = run_expression(prim->args[i], e);
 
 		switch (kind){
@@ -83,7 +83,7 @@ value run_primary(ast_primary *prim, environment *e){
 	case AST_ARY:;
 		array *a = malloc(sizeof(array));
 		a->elements = malloc((a->capacity = a->length = prim->amnt) * sizeof(value));
-		for (int i = 0; i < a->length; ++i)
+		for (int i = 0; i < a->length; i++)
 			a->elements[i] = run_expression(prim->args[i], e);
 		return new_array_value(a);
 
@@ -126,7 +126,7 @@ value run_expression(ast_expression *expr, environment *e){
 		v = run_primary(expr->prim, e);
 		v2 = run_expression(expr->index, e);
 		v3 = run_expression(expr->rhs, e);
-		index_assign(v, v2, v3);
+		index_assign_value(v, v2, v3);
 		return v3;
 
 	case AST_PRIM:
@@ -161,7 +161,7 @@ value run_expression(ast_expression *expr, environment *e){
 int run_block(const ast_block *block, value *ret, environment *e) {
 	int retkind;
 
-	for (int i = 0; i < block->amnt; ++i) {
+	for (int i = 0; i < block->amnt; i++) {
 		ast_statement *s = block->stmts[i];
 
 		switch (s->kind) {

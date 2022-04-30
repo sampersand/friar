@@ -17,7 +17,7 @@ array *new_array3(value *elements, unsigned length, unsigned capacity) {
 void dealloc_array(array *ary) {
 	assert(ary->refcount == 0);
 
-	for (unsigned i = 0; i < ary->length; ++i)
+	for (unsigned i = 0; i < ary->length; i++)
 		free_value(ary->elements[i]);
 
 	free(ary->elements);
@@ -57,10 +57,10 @@ array *add_arrays(array *lhs, array *rhs) {
 
 	array *ret = alloc_array(lhs->length + rhs->length);
 
-	for (unsigned i = 0; i < lhs->length; ++i)
+	for (unsigned i = 0; i < lhs->length; i++)
 		push_array(ret, lhs->elements[i]);
 
-	for (unsigned i = 0; i < rhs->length; ++i)
+	for (unsigned i = 0; i < rhs->length; i++)
 		push_array(ret, rhs->elements[i]);
 
 	return ret;
@@ -69,7 +69,7 @@ array *add_arrays(array *lhs, array *rhs) {
 int compare_arrays(const array *lhs, const array *rhs) {
 	unsigned min = lhs->length < rhs->length ? lhs->length : rhs->length;
 
-	for (unsigned i = 0; i < min; ++i) {
+	for (unsigned i = 0; i < min; i++) {
 		int cmp = compare_values(lhs->elements[i], rhs->elements[i]);
 
 		if (cmp != 0)
@@ -83,7 +83,7 @@ bool equate_arrays(const array *lhs, const array *rhs) {
 	if (lhs->length != rhs->length)
 		return false;
 
-	for (unsigned i = 0; i < lhs->length; ++i) {
+	for (unsigned i = 0; i < lhs->length; i++) {
 		if (!equate_values(lhs->elements[i], rhs->elements[i]))
 			return false;
 	}

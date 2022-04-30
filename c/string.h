@@ -42,3 +42,4 @@ static inline string *clone_string(string *str) {
 string *index_string(const string *str, int idx);
 string *add_strings(string *lhs, string *rhs);
 int compare_strings(const string *lhs, const string *rhs);
+string *replicate_strings(string *str, unsigned amnt);

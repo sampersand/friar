@@ -51,3 +51,14 @@ int compare_strings(const string *lhs, const string *rhs) {
 
 	return cmp < 0 ? -1 : cmp == 0 ? 0 : 1;
 }
+
+string *replicate_strings(string *str, unsigned amnt) {
+	if (amnt == 1)
+		return clone_string(str);
+
+	string *ret = alloc_string(str->length * amnt);
+
+	for (unsigned i = 0; i < amnt; i++) {
+
+	}
+}

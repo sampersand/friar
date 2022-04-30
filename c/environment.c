@@ -11,7 +11,7 @@ static void init_map(map *m) {
 }
 
 static void free_map(map *m) {
-	for (unsigned i = 0; i < m->len; ++i) {
+	for (unsigned i = 0; i < m->len; i++) {
 		free(m->entries[i].name);
 		free_value(m->entries[i].val);
 	}
@@ -20,7 +20,7 @@ static void free_map(map *m) {
 }
 
 static value *lookup_in_map(map *m, const char *name) {
-	for (int i = 0; i < m->len; ++i) {
+	for (int i = 0; i < m->len; i++) {
 		if (!strcmp(m->entries[i].name, name))
 			return &m->entries[i].val;
 	}
@@ -63,13 +63,13 @@ void free_environment(environment *env) {
 }
 
 void enter_stackframe(environment *env) {
-	++env->stack_pointer;
+	env->stack_pointer++;
 	init_map(current_stackframe(env));
 }
 
 void leave_stackframe(environment *env) {
 	free_map(current_stackframe(env));
-	--env->stack_pointer;
+	env->stack_pointer--;
 }
 
 

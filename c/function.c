@@ -20,7 +20,7 @@ function *new_function(char *name, unsigned argc, char **argv, ast_block *body) 
 void dealloc_function(function *func) {
 	assert(func->refcount == 0);
 
-	for (unsigned i = 0; i < func->argc; ++i)
+	for (unsigned i = 0; i < func->argc; i++)
 		free(func->argv[i]);
 
 	free(func->argv);
@@ -35,7 +35,7 @@ value call_function(const function *func, unsigned argc, value *argv, environmen
 
 	enter_stackframe(env);
 
-	for (unsigned i = 0; i < argc; ++i)
+	for (unsigned i = 0; i < argc; i++)
 		assign_var(env, func->argv[i], argv[i]);
 
 	value ret;

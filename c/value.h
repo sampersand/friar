@@ -125,11 +125,11 @@ static inline function *as_function(value val) {
 	return (function *) (val & ~TAG_MASK);
 }
 
-void dump_value(FILE *out, value v);
+void dump_value(FILE *out, value val);
 
-void index_assign(value ary, value idx, value val);
-value index_into(value ary, value idx);
-value call_value(value v, int argc, value *argv, environment *e);
+void index_assign_value(value ary, value idx, value val);
+value index_value(value ary, value idx);
+value call_value(value val, unsigned argc, value *argv, environment *env);
 
 value negate_value(value val);
 value not_value(value val);

@@ -9,7 +9,7 @@ void dump_value(FILE *out, value val) {
 		function *func = as_function(val);
 		fprintf(out, "Function(%s, args=[", func->name);
 
-		for (unsigned i = 0; i < func->argc; ++i) {
+		for (unsigned i = 0; i < func->argc; i++) {
 			if (i != 0)
 				fputs(", ", out);
 
@@ -24,7 +24,7 @@ void dump_value(FILE *out, value val) {
 		array *ary = as_array(val);
 
 		fprintf(out, "Array(");
-		for (unsigned i = 0; i < ary->length; ++i) {
+		for (unsigned i = 0; i < ary->length; i++) {
 			if (i != 0)
 				fputs(", ", out);
 
@@ -100,14 +100,14 @@ const char *value_kind_name(value_kind kind) {
 	}
 }
 
-value call_value(value val, int argc, value *argv, environment *env) {
+value call_value(value val, unsigned argc, value *argv, environment *env) {
 	if (!is_function(val))
-		die("cannot call a value of kind %s", value_kind_name(classify(val)));
+		die("cannot call a value of kind %s", value_name(val));
 
 	return call_function(as_function(val), argc, argv, env);
 }
 
-void index_assign(value ary, value idx, value val) {
+void index_assign_value(value ary, value idx, value val) {
 	if (!is_array(ary))
 		die("can only index assign into arrays");
 
@@ -117,20 +117,32 @@ void index_assign(value ary, value idx, value val) {
 	index_assign_array(as_array(ary), as_number(idx), val);
 }
 
-value index_into(value ary, value idx) {
+value index_value(value val, value idx) {
 	if (!is_number(idx))
 		die("you must index with numbers");
 
 	number num_idx = as_number(idx);
 
-	switch (classify(ary)) {
+	switch (classify(val)) {
 	case VK_STRING:;
-		string *str = index_string(as_string(ary), num_idx);
-		return str == NULL ? VNULL : new_string_value(str);
+		string *str = index_string(as_string(val), num_idx);
+
+		if (str == NULL) {
+			die("index %lld is out of bounds for string length %u",
+				num_idx, as_string(val)->length);
+		}
+
+		return new_string_value(str);
 
 	case VK_ARRAY:;
-		value ret = index_array(as_array(ary), num_idx);
-		return ret == VUNDEF ? VNULL : ret;
+		value ret = index_array(as_array(val), num_idx);
+
+		if (ret == VUNDEF) {
+			die("index %lld is out of bounds for array length %u",
+				num_idx, as_array(val)->length);
+		}
+
+		return ret;
 
 	default:
 		die("can only index into arrays or strs");
@@ -219,10 +231,26 @@ value subtract_values(value lhs, value rhs) {
 }
 
 value multiply_values(value lhs, value rhs) {
-	if (!is_number(lhs) || !is_number(rhs))
-		die("can only multiply numbers from numbers");
+	if (!is_number(rhs))  {
+		die("can only multiply numbers, strings, and arrays by numbers, not %s",
+			value_name(rhs));
+	}
 
-	return new_number_value(as_number(lhs) * as_number(rhs));
+	number amnt = as_number(rhs);
+
+	switch (classify(lhs)) {
+	case VK_NUMBER:
+		return new_number_value(as_number(lhs) + amnt);
+
+	case VK_STRING:
+		return new_string_value(replicate_string(as_string(lhs), amnt));
+
+	case VK_ARRAY:
+		return new_string_value(replicate_array(as_array(lhs), amnt));
+
+	default:
+		die("can only multiply numbers, strings, and arrays.");
+	}
 }
 
 value divide_values(value lhs, value rhs) {
