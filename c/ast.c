@@ -1,300 +1,131 @@
 #include "ast.h"
 #include "token.h"
+#include "value.h"
 #include <stdlib.h>
 #include <assert.h>
 
-#define UNEXPECTED_TOKEN(tzr, tkn) (fprintf(stderr, \
-	"unexpected token at line %d: [%d] ", tzr->lineno, __LINE__), dump_token(stderr, tkn), exit(1))
-
-token peek(tokenizer *tzr) {
-	if (!tzr->prev.kind)
-		tzr->prev = next_token(tzr);
-	return tzr->prev;
-}
-
-token advance(tokenizer *tzr) {
-	token tkn = peek(tzr);
-	tzr->prev.kind = TK_UNDEFINED;
-	return tkn;
-}
-
-void unadvance(tokenizer *tzr, token tkn) {
-	assert(!tzr->prev.kind);
-	tzr->prev = tkn;
-}
-
-token guard(tokenizer *tzr, token_kind k) {
-	return peek(tzr).kind == k ? advance(tzr) : (token) { .kind = TK_UNDEFINED };
-}
-
-token expect(tokenizer *tzr, token_kind k) {
-	token tkn = guard(tzr, k);
-
-	if (tkn.kind)
-		return tkn;
-
-	UNEXPECTED_TOKEN(tzr, peek(tzr));
-}
-
-static ast_expression *parse_expression(tokenizer *tzr);
-static ast_primary *parse_primary(tokenizer *tzr) {
-	ast_primary *prim = malloc(sizeof(ast_primary));
-	token tkn;
-
-again:
-	switch ((tkn = advance(tzr)).kind) {
-	case TK_ADD:
-		goto again; // we ignore unary `+`s.
-
-	case TK_LPAREN:
-		prim->kind = AST_PAREN;
-		if (!(prim->expr = parse_expression(tzr)))
-			UNEXPECTED_TOKEN(tzr, peek(tzr));
-		expect(tzr, TK_RPAREN);
+void free_ast_primary(ast_primary *primary) {
+	switch (primary->kind) {
+	case AST_PRIMARY_PAREN:
+		free_ast_expression(primary->paren.expression);
 		break;
 
-	case TK_LBRACKET:
-		prim->kind = AST_ARY;
-		int cap = 4;
-		prim->amnt = 0;
-		prim->args = malloc(cap * sizeof(ast_expression *));
-		while (!guard(tzr, TK_RBRACKET).kind) {
-			if (prim->amnt == cap)
-				prim->args = realloc(prim->args, (cap *= 2)*sizeof(ast_expression *));
-
-			if (!(prim->args[prim->amnt++] = parse_expression(tzr)))
-				UNEXPECTED_TOKEN(tzr, peek(tzr));
-
-			if (!guard(tzr, TK_COMMA).kind) {
-				expect(tzr, TK_RBRACKET);
-				break;
-			}
-		}
+	case AST_PRIMARY_INDEX:
+		free_ast_primary(primary->index.source);
+		free_ast_expression(primary->index.index);
 		break;
 
-	case TK_SUBTRACT:
-	case TK_NOT:
-		prim->kind = tkn.kind == TK_SUBTRACT ? AST_NEG : AST_NOT;
-		if (!(prim->prim = parse_primary(tzr)))
-			UNEXPECTED_TOKEN(tzr, peek(tzr));
+	case AST_PRIMARY_FUNCTION_CALL:
+		free_ast_primary(primary->function_call.function);
+
+		for (unsigned i = 0; i < primary->function_call.number_of_arguments; i++)
+			free_ast_expression(primary->function_call.arguments[i]);
+		free(primary->function_call.arguments);
+
 		break;
 
-	case TK_IDENTIFIER:
-		prim->kind = AST_VAR;
-		prim->ident = tkn.str;
+	case AST_PRIMARY_UNARY_OPERATOR:
+		free_ast_primary(primary->unary_operator.primary);
 		break;
 
-	case TK_LITERAL:
-		prim->kind = AST_LITERAL;
-		prim->value = tkn.val;
+	case AST_PRIMARY_ARRAY_LITERAL:
+		for (unsigned i = 0; i < primary->array_literal.length; i++)
+			free_ast_expression(primary->array_literal.elements[i]);
+		free(primary->array_literal.elements);
 		break;
 
-	default:
-		unadvance(tzr, tkn);
-		free(prim);
-		return 0;
+	case AST_PRIMARY_VARIABLE:
+		free(primary->variable.name);
+		break;
+
+	case AST_PRIMARY_LITERAL:
+		free_value(primary->literal.val);
+		break;
 	}
 
-	while ((tkn = peek(tzr)).kind == TK_LBRACKET || tkn.kind == TK_LPAREN) {
-		ast_primary *prim2 = malloc(sizeof(ast_primary));
-		prim2->prim = prim;
-		prim = prim2;
-
-		if (guard(tzr, TK_LBRACKET).kind) {
-			prim->kind = AST_INDEX;
-			if (!(prim->expr = parse_expression(tzr))) 
-				UNEXPECTED_TOKEN(tzr, peek(tzr));
-			expect(tzr, TK_RBRACKET);
-			continue;
-		}
-
-		expect(tzr, TK_LPAREN);
-		// parse function call
-		prim->kind = AST_FNCALL;
-
-		int cap = 4;
-		prim->amnt = 0;
-		prim->args = malloc(cap * sizeof(ast_expression *));
-		while (!guard(tzr, TK_RPAREN).kind) {
-			if (prim->amnt == cap)
-				prim->args = realloc(prim->args, (cap *= 2)*sizeof(ast_expression *));
-
-			if (!(prim->args[prim->amnt++] = parse_expression(tzr)))
-				UNEXPECTED_TOKEN(tzr, peek(tzr));
-
-			if (!guard(tzr, TK_COMMA).kind) {
-				expect(tzr, TK_RPAREN);
-				break;
-			}
-		}
-	}
-
-	return prim;
+	free(primary);
 }
 
-static ast_expression *parse_expression(tokenizer *tzr) {
-	ast_expression *expr = malloc(sizeof(ast_expression));
-	if (!(expr->prim = parse_primary(tzr))) {
-		free(expr);
-		return 0;
-	}
-
-	token tkn;
-	switch ((tkn = advance(tzr)).kind) {
-	case TK_ADD_ASSIGN:
-	case TK_SUBTRACT_ASSIGN:
-	case TK_MULTIPLY_ASSIGN:
-	case TK_DIVIDE_ASSIGN:
-	case TK_MODULO_ASSIGN:
-	case TK_ASSIGN:
-		expr->binop = tkn.kind;
-
-		if (expr->prim->kind == AST_VAR) {
-			expr->kind = AST_ASSIGN;
-			char *name = expr->prim->ident;
-			free(expr->prim);
-			expr->name = name;
-		} else if (expr->prim->kind == AST_INDEX) {
-			expr->kind = AST_IDX_ASSIGN;
-			expr->index = expr->prim->expr;
-			ast_primary *prim = expr->prim->prim;
-			free(expr->prim);
-			expr->prim = prim;
-		}
-
-		if (!(expr->rhs = parse_expression(tzr)))
-			UNEXPECTED_TOKEN(tzr, peek(tzr));
+void free_ast_expression(ast_expression *expression) {
+	switch (expression->kind) {
+	case AST_EXPRESSION_ASSIGN:
+		free(expression->assign.name);
+		free_ast_expression(expression->assign.value);
 		break;
 
-	case TK_ADD: case TK_SUBTRACT: case TK_MULTIPLY: case TK_DIVIDE: case TK_MODULO: case TK_NOT:
-	case TK_LESS_THAN: case TK_GREATER_THAN: case TK_LESS_THAN_OR_EQUAL: case TK_GREATER_THAN_OR_EQUAL: case TK_EQUAL: case TK_NOT_EQUAL:
-		expr->kind = AST_BINOP;
-		expr->binop = tkn.kind;
-		if (!(expr->rhs = parse_expression(tzr)))
-			UNEXPECTED_TOKEN(tzr, peek(tzr));
+	case AST_EXPRESSION_INDEX_ASSIGN:
+		free_ast_primary(expression->index_assign.source);
+		free_ast_expression(expression->index_assign.index);
+		free_ast_expression(expression->index_assign.value);
 		break;
 
-	default:
-		unadvance(tzr, tkn);
-		expr->kind = AST_PRIM;
-	}
+	case AST_EXPRESSION_BINARY_OPERATOR:
+		free_ast_expression(expression->binary_operator.lhs);
+		free_ast_expression(expression->binary_operator.rhs);
+		break;
 
-	return expr;
+	case AST_EXPRESSION_PRIMARY:
+		free_ast_primary(expression->primary);
+		break;
+	}
 }
 
-static ast_block *parse_block(tokenizer *tzr);
-
-static ast_statement *parse_statement(tokenizer *tzr) {
-	ast_statement *stmt = malloc(sizeof(ast_statement));
-	token tkn;
-
-	switch ((tkn = advance(tzr)).kind) {
-	case TK_RETURN:
-		stmt->kind = AST_RETURN;
-		stmt->expr = parse_expression(tzr);
-		expect(tzr, TK_SEMICOLON);
+void free_ast_statement(ast_statement *statement) {
+	switch (statement->kind) {
+	case AST_STATEMENT_RETURN:
+		if (statement->return_.expression != NULL)
+			free_ast_expression(statement->return_.expression);
 		break;
 
-	case TK_CONTINUE:
-	case TK_BREAK:
-		stmt->kind = tkn.kind == TK_BREAK ? AST_BREAK : AST_CONTINUE;
-		expect(tzr, TK_SEMICOLON);
+	case AST_STATEMENT_IF:
+		free_ast_expression(statement->if_.condition);
+		free_ast_block(statement->if_.if_true);
+		if (statement->if_.if_false != NULL)
+			free_ast_block(statement->if_.if_false);
 		break;
 
-	case TK_WHILE:
-		stmt->kind = AST_WHILE;
-		if (!(stmt->expr = parse_expression(tzr)))
-			UNEXPECTED_TOKEN(tzr, peek(tzr));
-		stmt->body = parse_block(tzr);
+	case AST_STATEMENT_WHILE:
+		free_ast_expression(statement->while_.condition);
+		free_ast_block(statement->while_.body);
 		break;
 
-	case TK_IF:
-		stmt->kind = AST_IF;
-		if (!(stmt->expr = parse_expression(tzr)))
-			UNEXPECTED_TOKEN(tzr, peek(tzr));
-
-		stmt->body = parse_block(tzr);
-		stmt->else_body = guard(tzr, TK_ELSE).kind ? parse_block(tzr) : 0;
+	case AST_STATEMENT_BREAK:
 		break;
 
-	default:
-		unadvance(tzr, tkn);
-		if (!(stmt->expr = parse_expression(tzr))) {
-			free(stmt);
-			return 0;
-		}
-		stmt->kind = AST_EXPR;
-		expect(tzr, TK_SEMICOLON);
+	case AST_STATEMENT_CONTINUE:
+		break;
+
+	case AST_STATEMENT_EXPRESSION:
+		free_ast_expression(statement->expression);
+		break;
 	}
 
-	return stmt;
+	free(statement);
+};
+
+void free_ast_block(ast_block *block) {
+	for (unsigned i = 0; i < block->number_of_statements; i++)
+		free_ast_statement(block->statements[i]);
+
+	free(block->statements);
+	free(block);
 }
 
-static ast_block *parse_block(tokenizer *tzr) {
-	ast_block *block = malloc(sizeof(ast_block));
+void free_ast_declaration(ast_declaration *declaration) {
+	switch (declaration->kind) {
+	case AST_DECLARATION_GLOBAL:
+		free(declaration->global.name);
+		break;
 
-	int cap = 4;
-	block->amnt = 0;
-	block->stmts = malloc(cap * sizeof(ast_statement*));
+	case AST_DECLARATION_FUNCTION:
+		free(declaration->function.name);
 
-	expect(tzr, TK_LBRACE);
-	while (!guard(tzr, TK_RBRACE).kind) {
-		if (block->amnt == cap)
-			block->stmts = realloc(block->stmts, (cap*=2) * sizeof(ast_statement*));
+		for (unsigned i = 0; i < declaration->function.number_of_arguments; i++)
+			free(declaration->function.argument_names[i]);
+		free(declaration->function.argument_names);
 
-		// remove lonely semicolons
-		while (guard(tzr, TK_SEMICOLON).kind);
-
-		if (!(block->stmts[block->amnt++] = parse_statement(tzr)))
-			UNEXPECTED_TOKEN(tzr, peek(tzr));
+		free_ast_block(declaration->function.body);
+		break;
 	}
-
-	return block;
-}
-
-static ast_declaration *parse_global(tokenizer *tzr) {
-	ast_declaration *decl = malloc(sizeof(ast_declaration));
-	decl->kind = AST_GLOBAL;
-	decl->name = expect(tzr, TK_IDENTIFIER).str;
-	expect(tzr, TK_SEMICOLON);
-	return decl;
-}
-
-static ast_declaration *parse_function(tokenizer *tzr) {
-	ast_declaration *decl = malloc(sizeof(ast_declaration));
-	decl->kind = AST_FUNCTION;
-	decl->name = expect(tzr, TK_IDENTIFIER).str;
-	expect(tzr, TK_LPAREN);
-
-	int cap = 4;
-	decl->argc = 0;
-	decl->args = malloc(cap * sizeof(char*));
-	while (!guard(tzr, TK_RPAREN).kind) {
-		if (decl->argc == cap)
-			decl->args = realloc(decl->args, (cap *= 2)*sizeof(char*));
-
-		decl->args[decl->argc++] = expect(tzr, TK_IDENTIFIER).str;
-		if (!guard(tzr, TK_COMMA).kind) {
-			expect(tzr, TK_RPAREN);
-			break;
-		}
-	}
-
-	decl->block = parse_block(tzr);
-	return decl;
-}
-
-ast_declaration *next_declaration(tokenizer *tzr) {
-	token tkn;
-
-	switch ((tkn = advance(tzr)).kind) {
-	case TK_GLOBAL:
-		return parse_global(tzr);
-	case TK_FUNCTION:
-		return parse_function(tzr);
-	case TK_UNDEFINED:
-		return 0;
-	default:
-		UNEXPECTED_TOKEN(tzr, tkn);
-	}
+	free(declaration);
 }

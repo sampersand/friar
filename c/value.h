@@ -14,35 +14,35 @@
 #include "ast.h"
 
 typedef enum {
-	VK_BOOLEAN,
-	VK_NULL,
-	VK_STRING,
-	VK_FUNCTION,
-	VK_ARRAY,
-	VK_NUMBER,
+	VALUE_KIND_BOOLEAN,
+	VALUE_KIND_NULL,
+	VALUE_KIND_STRING,
+	VALUE_KIND_FUNCTION,
+	VALUE_KIND_ARRAY,
+	VALUE_KIND_NUMBER,
 } value_kind;
 
 enum {
-	TAG_STRING   = 0,
-	TAG_FUNCTION = 1,
-	TAG_ARRAY    = 2,
-	TAG_NUMBER   = 4,
-	TAG_MASK     = (TAG_STRING | TAG_FUNCTION | TAG_ARRAY | TAG_NUMBER)
+	VALUE_TAG_STRING   = 0,
+	VALUE_TAG_FUNCTION = 1,
+	VALUE_TAG_ARRAY    = 2,
+	VALUE_TAG_NUMBER   = 4,
+	VALUE_TAG_MASK     = (VALUE_TAG_STRING | VALUE_TAG_FUNCTION | VALUE_TAG_ARRAY | VALUE_TAG_NUMBER)
 };
 
 static inline value_kind classify(value val) {
 	if (val == VNULL)
-		return VK_NULL;
+		return VALUE_KIND_NULL;
 
 	if (val == VTRUE || val == VFALSE)
-		return VK_BOOLEAN;
+		return VALUE_KIND_BOOLEAN;
 
-	switch (val & TAG_MASK) {
-	case TAG_STRING: return VK_STRING;
-	case TAG_FUNCTION: return VK_FUNCTION;
-	case TAG_ARRAY: return VK_ARRAY;
-	case TAG_NUMBER: return VK_NUMBER;
-	default: die("[bug] invalid value tag: %lld", val & TAG_MASK);
+	switch (val & VALUE_TAG_MASK) {
+	case VALUE_TAG_STRING: return VALUE_KIND_STRING;
+	case VALUE_TAG_FUNCTION: return VALUE_KIND_FUNCTION;
+	case VALUE_TAG_ARRAY: return VALUE_KIND_ARRAY;
+	case VALUE_TAG_NUMBER: return VALUE_KIND_NUMBER;
+	default: die("[bug] invalid value tag: %lld", val & VALUE_TAG_MASK);
 	}
 }
 
@@ -53,23 +53,23 @@ static inline const char *value_name(value val) {
 }
 
 static inline value new_array_value(array *ary) {
-	assert(((value) ary & TAG_MASK) == 0);
+	assert(((value) ary & VALUE_TAG_MASK) == 0);
 
-	return (value) ary | TAG_ARRAY;
+	return (value) ary | VALUE_TAG_ARRAY;
 }
 
 static inline value new_number_value(number num) {
-	return ((value) num << 3) | TAG_NUMBER;
+	return ((value) num << 3) | VALUE_TAG_NUMBER;
 }
 
 static inline value new_string_value(string *str) {
-	assert(((value) str & TAG_MASK) == 0);
-	return (value) str | TAG_STRING;
+	assert(((value) str & VALUE_TAG_MASK) == 0);
+	return (value) str | VALUE_TAG_STRING;
 }
 
 static inline value new_function_value(function *func) {
-	assert(((value) func & TAG_MASK) == 0);
-	return (value) func | TAG_FUNCTION;
+	assert(((value) func & VALUE_TAG_MASK) == 0);
+	return (value) func | VALUE_TAG_FUNCTION;
 }
 
 static inline value new_boolean_value(bool boolean) {
@@ -85,19 +85,19 @@ static inline bool is_null(value val) {
 }
 
 static inline bool is_array(value val) {
-	return classify(val) == VK_ARRAY;
+	return classify(val) == VALUE_KIND_ARRAY;
 }
 
 static inline bool is_number(value val) {
-	return classify(val) == VK_NUMBER;
+	return classify(val) == VALUE_KIND_NUMBER;
 }
 
 static inline bool is_string(value val) {
-	return classify(val) == VK_STRING;
+	return classify(val) == VALUE_KIND_STRING;
 }
 
 static inline bool is_function(value val) {
-	return classify(val) == VK_FUNCTION;
+	return classify(val) == VALUE_KIND_FUNCTION;
 }
 
 static inline bool as_boolean(value val) {
@@ -107,7 +107,7 @@ static inline bool as_boolean(value val) {
 
 static inline array *as_array(value val) {
 	assert(is_array(val));
-	return (array *) (val & ~TAG_MASK);
+	return (array *) (val & ~VALUE_TAG_MASK);
 }
 
 static inline number as_number(value val) {
@@ -117,12 +117,12 @@ static inline number as_number(value val) {
 
 static inline string *as_string(value val) {
 	assert(is_string(val));
-	return (string *) (val & ~TAG_MASK);
+	return (string *) (val & ~VALUE_TAG_MASK);
 }
 
 static inline function *as_function(value val) {
 	assert(is_function(val));
-	return (function *) (val & ~TAG_MASK);
+	return (function *) (val & ~VALUE_TAG_MASK);
 }
 
 void dump_value(FILE *out, value val);

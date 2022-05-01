@@ -58,9 +58,9 @@ value run_primary(ast_primary *prim, environment *e){
 
 		case 4:
 			switch (classify(args[0])) {
-			case VK_STRING:
+			case VALUE_KIND_STRING:
 				return new_number_value(as_string(args[0])->length);
-			case VK_ARRAY:
+			case VALUE_KIND_ARRAY:
 				return new_number_value(as_array(args[0])->length);
 			default:
 				die("can only get lengths of arrays and strings");

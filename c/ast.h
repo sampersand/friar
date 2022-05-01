@@ -2,64 +2,175 @@
 
 #include "valuedefn.h"
 #include "token.h"
+#include "environment.h"
 
-struct ast_declaration *next_declaration(tokenizer *tzr);
+typedef struct ast_expression ast_expression;
+typedef struct ast_primary ast_primary;
+typedef struct ast_block ast_block;
+typedef struct ast_statement ast_statement;
+typedef struct ast_declaration ast_declaration;
 
-typedef struct ast_primary {
+typedef enum {
+	UNARY_OP_NEGATE,
+	UNARY_OP_NOT
+} unary_operator;
+
+typedef enum {
+	BINARY_OP_UNDEF,
+	BINARY_OP_ADD,
+	BINARY_OP_SUBTRACT,
+	BINARY_OP_MULTIPLY,
+	BINARY_OP_DIVIDE,
+	BINARY_OP_MODULO,
+	BINARY_OP_EQUAL,
+	BINARY_OP_NOT_EQUAL,
+	BINARY_OP_LESS_THAN,
+	BINARY_OP_LESS_THAN_OR_EQUAL,
+	BINARY_OP_GREATER_THAN,
+	BINARY_OP_GREATER_THAN_OR_EQUAL
+} binary_operator;
+
+
+struct ast_primary {
 	enum {
-		AST_PAREN, AST_INDEX, AST_FNCALL,
-		AST_NEG, AST_NOT, AST_ARY, AST_VAR, AST_LITERAL
+		AST_PRIMARY_PAREN,
+		AST_PRIMARY_INDEX,
+		AST_PRIMARY_FUNCTION_CALL,
+		AST_PRIMARY_UNARY_OPERATOR,
+		AST_PRIMARY_ARRAY_LITERAL,
+		AST_PRIMARY_VARIABLE,
+		AST_PRIMARY_LITERAL
 	} kind;
 
 	union {
 		struct {
-			int amnt; // use in ary literal and fncall
-			struct ast_primary *prim; // used in index, fncall, and neg/not.
-			struct ast_expression *expr, **args; // used in index & paren; used in ary literal and fncall
-		};
-		char *ident; // used in var
-		value value; // used in literal
+			ast_expression *expression;
+		} paren;
+
+		struct {
+			ast_primary *source;
+			ast_expression *index;
+		} index;
+
+		struct {
+			ast_primary *function;
+
+			unsigned number_of_arguments;
+			ast_expression **arguments;
+		} function_call;
+
+		struct {
+			unary_operator operator;
+			ast_primary *primary;
+		} unary_operator;
+
+		struct {
+			unsigned length;
+			ast_expression **elements;
+		} array_literal;
+
+		struct {
+			char *name;
+		} variable;
+
+		struct {
+			value val;
+		} literal;
 	};
-} ast_primary;
+};
 
-typedef struct ast_expression {
-	enum { AST_ASSIGN, AST_IDX_ASSIGN, AST_BINOP, AST_PRIM } kind;
+struct ast_expression {
+	enum {
+		AST_EXPRESSION_ASSIGN,
+		AST_EXPRESSION_INDEX_ASSIGN,
+		AST_EXPRESSION_BINARY_OPERATOR,
+		AST_EXPRESSION_PRIMARY
+	} kind;
 
-	token_kind binop; // used for binop and also assignments
-	struct ast_expression *index, *rhs; // index used for index assign ; rhs used for both assigns and binop
 	union {
-		struct ast_primary *prim; // used in binop and idx assign
-		char *name; // used in assign
+		struct {
+			binary_operator operator; // Set to `BINARY_OP_UNDEF` when normal assignment.
+			char *name;
+			ast_expression *value;
+		} assign;
+
+		struct {
+			ast_primary *source;
+			ast_expression *index, *value;
+		} index_assign;
+
+		struct {
+			binary_operator operator;
+			ast_expression *lhs, *rhs;
+		} binary_operator;
+
+		ast_primary *primary;
 	};
-} ast_expression;
+};
 
-typedef struct ast_statement {
-	enum { AST_RETURN, AST_IF, AST_WHILE, AST_BREAK, AST_CONTINUE, AST_EXPR } kind;
+struct ast_statement {
+	enum {
+		AST_STATEMENT_RETURN,
+		AST_STATEMENT_IF,
+		AST_STATEMENT_WHILE,
+		AST_STATEMENT_BREAK,
+		AST_STATEMENT_CONTINUE,
+		AST_STATEMENT_EXPRESSION
+	} kind;
 
-	struct ast_expression *expr; // `return`, `if`'s condition, `while`'s condition, and `expr`
-	struct ast_block *body, *else_body; // body is if and while body
-} ast_statement;
+	union {
+		struct {
+			ast_expression *expression; // is `NULL` if there's no explicit value given.
+		} return_;
 
-typedef struct ast_block {
-	int amnt;
-	struct ast_statement **stmts;
-} ast_block;
+		struct {
+			ast_expression *condition;
+			ast_block *if_true, *if_false; // `if_false` is `NULL` if there wasn't an `else`.
+		} if_;
 
-typedef struct ast_declaration {
-	enum { AST_GLOBAL, AST_FUNCTION } kind;
-	char *name;
+		struct {
+			ast_expression *condition;
+			ast_block *body;
+		} while_;
 
-	// not used for global:
-	char **args;
-	int argc;
-	struct ast_block *block;
-} ast_declaration;
+		// nothing for `break` or `continue`, as those dont have associated data.
+		ast_expression *expression;
+	};
+};
 
+struct ast_block {
+	unsigned number_of_statements;
+	ast_statement **statements;
+};
 
-struct _environment;
-int run_block(const ast_block *block, value *ret, struct _environment *env);
+struct ast_declaration {
+	enum {
+		AST_DECLARATION_GLOBAL,
+		AST_DECLARATION_FUNCTION
+	} kind;
 
-static inline void free_ast_block(ast_block *block) {
+	union {
+		struct {
+			char *name;
+		} global;
 
-	// todo. also free `ab`.
-}
+		struct {
+			char *name;
+
+			unsigned number_of_arguments;
+			char **argument_names;
+
+			ast_block *body;
+		} function;
+	};
+};
+
+int run_block(const ast_block *block, value *ret, environment *env);
+ast_declaration *next_declaration(tokenizer *tzr);
+
+void free_ast_expression(ast_expression *expression);
+void free_ast_primary(ast_primary *primary);
+void free_ast_expression(ast_expression *expression);
+void free_ast_statement(ast_statement *statement);
+void free_ast_block(ast_block *block);
+void free_ast_declaration(ast_declaration *declaration);
