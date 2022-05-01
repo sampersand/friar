@@ -11,7 +11,7 @@ tokenizer new_tokenizer(const char *stream) {
 	return (tokenizer) {
 		.stream = stream,
 		.lineno = 1,
-		.prev = (token) { .kind = TK_UNDEFINED }
+		.prev = (token) { .kind = TOKEN_KIND_UNDEFINED }
 	};
 }
 
@@ -47,7 +47,7 @@ static token parse_number(tokenizer *tzr) {
 	if (isalnum(c) || c == '_')
 		parse_error(tzr, "bad character '%c' after integer literal", c);
 
-	return (token) { .kind = TK_LITERAL, .val = new_number_value(num) };
+	return (token) { .kind = TOKEN_KIND_LITERAL, .val = new_number_value(num) };
 }
 
 static bool isalnum_or_underscore(char c) {
@@ -63,20 +63,20 @@ static token parse_identifier(tokenizer *tzr) {
 	unsigned length = tzr->stream - start;
 
 	// check for predefined identifiers
-	if (!strncmp(start, "true", length)) return (token) { .kind = TK_LITERAL, .val = VTRUE };
-	if (!strncmp(start, "false", length)) return (token) { .kind = TK_LITERAL, .val = VFALSE };
-	if (!strncmp(start, "null", length)) return (token) { .kind = TK_LITERAL, .val = VNULL };
-	if (!strncmp(start, "global", length)) return (token) { .kind = TK_GLOBAL };
-	if (!strncmp(start, "function", length)) return (token) { .kind = TK_FUNCTION };
-	if (!strncmp(start, "if", length)) return (token) { .kind = TK_IF };
-	if (!strncmp(start, "else", length)) return (token) { .kind = TK_ELSE };
-	if (!strncmp(start, "while", length)) return (token) { .kind = TK_WHILE };
-	if (!strncmp(start, "break", length)) return (token) { .kind = TK_BREAK };
-	if (!strncmp(start, "continue", length)) return (token) { .kind = TK_CONTINUE };
-	if (!strncmp(start, "return", length)) return (token) { .kind = TK_RETURN };
+	if (!strncmp(start, "true", length)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VTRUE };
+	if (!strncmp(start, "false", length)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VFALSE };
+	if (!strncmp(start, "null", length)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VNULL };
+	if (!strncmp(start, "global", length)) return (token) { .kind = TOKEN_KIND_GLOBAL };
+	if (!strncmp(start, "function", length)) return (token) { .kind = TOKEN_KIND_FUNCTION };
+	if (!strncmp(start, "if", length)) return (token) { .kind = TOKEN_KIND_IF };
+	if (!strncmp(start, "else", length)) return (token) { .kind = TOKEN_KIND_ELSE };
+	if (!strncmp(start, "while", length)) return (token) { .kind = TOKEN_KIND_WHILE };
+	if (!strncmp(start, "break", length)) return (token) { .kind = TOKEN_KIND_BREAK };
+	if (!strncmp(start, "continue", length)) return (token) { .kind = TOKEN_KIND_CONTINUE };
+	if (!strncmp(start, "return", length)) return (token) { .kind = TOKEN_KIND_RETURN };
 
 	// it's a normal identifier, retunr that.
-	return (token) { .kind = TK_IDENTIFIER, .str = strndup(start, length) };
+	return (token) { .kind = TOKEN_KIND_IDENTIFIER, .str = strndup(start, length) };
 }
 
 static int parse_hex(tokenizer *tzr, char c) {
@@ -148,7 +148,7 @@ static token parse_string(tokenizer *tzr) {
 	str[length] = '\0';
 
 	return (token) {
-		.kind = TK_LITERAL,
+		.kind = TOKEN_KIND_LITERAL,
 		.val = new_string_value(new_string2(str, length))
 	};
 }
@@ -189,7 +189,7 @@ token next_token(tokenizer *tzr) {
 	char c = peek(tzr);
 
 	if (c == '\0')
-		return (token) { .kind = TK_UNDEFINED };
+		return (token) { .kind = TOKEN_KIND_UNDEFINED };
 
 	if (isdigit(c))
 		return parse_number(tzr);
@@ -205,69 +205,69 @@ token next_token(tokenizer *tzr) {
 
 	switch (c) {
 	// Simple tokens
-	case '(': return (token) { .kind = TK_LPAREN };
- 	case ')': return (token) { .kind = TK_RPAREN };
-	case '[': return (token) { .kind = TK_LBRACKET };
-	case ']': return (token) { .kind = TK_RBRACKET };
-	case '{': return (token) { .kind = TK_LBRACE };
-	case '}': return (token) { .kind = TK_RBRACE };
-	case ',': return (token) { .kind = TK_COMMA };
-	case ';': return (token) { .kind = TK_SEMICOLON };
+	case '(': return (token) { .kind = TOKEN_KIND_LPAREN };
+ 	case ')': return (token) { .kind = TOKEN_KIND_RPAREN };
+	case '[': return (token) { .kind = TOKEN_KIND_LBRACKET };
+	case ']': return (token) { .kind = TOKEN_KIND_RBRACKET };
+	case '{': return (token) { .kind = TOKEN_KIND_LBRACE };
+	case '}': return (token) { .kind = TOKEN_KIND_RBRACE };
+	case ',': return (token) { .kind = TOKEN_KIND_COMMA };
+	case ';': return (token) { .kind = TOKEN_KIND_SEMICOLON };
 
 	// compound tokens
 	case '&':
 		if ((c = peek_advance(tzr)) != '&')
 			parse_error(tzr, "only `&&` is recognized, not `&%c`", c);
-		return (token) { .kind = TK_AND_AND };
+		return (token) { .kind = TOKEN_KIND_AND_AND };
 
 	case '|':
 		if ((c = peek_advance(tzr)) != '|')
 			parse_error(tzr, "only `||` is recognized, not `|%c`", c);
-		return (token) { .kind = TK_OR_OR };
+		return (token) { .kind = TOKEN_KIND_OR_OR };
 
 	case '=':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_EQUAL : TK_ASSIGN
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_EQUAL : TOKEN_KIND_ASSIGN
 		};
 
 	case '!':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_NOT_EQUAL : TK_NOT
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_NOT_EQUAL : TOKEN_KIND_NOT
 		};
 
 	case '<':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_LESS_THAN_OR_EQUAL : TK_LESS_THAN
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_LESS_THAN_OR_EQUAL : TOKEN_KIND_LESS_THAN
 		};
 
 	case '>':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_GREATER_THAN_OR_EQUAL : TK_GREATER_THAN
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_GREATER_THAN_OR_EQUAL : TOKEN_KIND_GREATER_THAN
 		};
 
 	case '+':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_ADD_ASSIGN : TK_ADD
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_ADD_ASSIGN : TOKEN_KIND_ADD
 		};
 
 	case '-':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_SUBTRACT_ASSIGN : TK_SUBTRACT
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_SUBTRACT_ASSIGN : TOKEN_KIND_SUBTRACT
 		};
 
 	case '*':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_MULTIPLY_ASSIGN : TK_MULTIPLY
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_MULTIPLY_ASSIGN : TOKEN_KIND_MULTIPLY
 		};
 
 	case '/':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_DIVIDE_ASSIGN : TK_DIVIDE
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_DIVIDE_ASSIGN : TOKEN_KIND_DIVIDE
 		};
 
 	case '%':
 		return (token) {
-			.kind = advance_if_equal(tzr) ? TK_MODULO_ASSIGN : TK_MODULO
+			.kind = advance_if_equal(tzr) ? TOKEN_KIND_MODULO_ASSIGN : TOKEN_KIND_MODULO
 		};
 
 	default:
@@ -277,51 +277,51 @@ token next_token(tokenizer *tzr) {
 
 void dump_token(FILE *out, token tkn) {
 	switch(tkn.kind) {
-	case TK_UNDEFINED: fputs("UNDEF", out); break;
+	case TOKEN_KIND_UNDEFINED: fputs("UNDEF", out); break;
 
-	case TK_LITERAL: dump_value(out, tkn.val); break;
-	case TK_IDENTIFIER: fprintf(out, "Identifier(%s)\n", tkn.str); break;
+	case TOKEN_KIND_LITERAL: dump_value(out, tkn.val); break;
+	case TOKEN_KIND_IDENTIFIER: fprintf(out, "Identifier(%s)\n", tkn.str); break;
 
-	case TK_GLOBAL: fputs("Keyword(global)", out); break;
-	case TK_FUNCTION: fputs("Keyword(function)", out); break;
-	case TK_IF: fputs("Keyword(if)", out); break;
-	case TK_ELSE: fputs("Keyword(else)", out); break;
-	case TK_WHILE: fputs("Keyword(while)", out); break;
-	case TK_BREAK: fputs("Keyword(break)", out); break;
-	case TK_CONTINUE: fputs("Keyword(continue)", out); break;
-	case TK_RETURN: fputs("Keyword(return)", out); break;
+	case TOKEN_KIND_GLOBAL: fputs("Keyword(global)", out); break;
+	case TOKEN_KIND_FUNCTION: fputs("Keyword(function)", out); break;
+	case TOKEN_KIND_IF: fputs("Keyword(if)", out); break;
+	case TOKEN_KIND_ELSE: fputs("Keyword(else)", out); break;
+	case TOKEN_KIND_WHILE: fputs("Keyword(while)", out); break;
+	case TOKEN_KIND_BREAK: fputs("Keyword(break)", out); break;
+	case TOKEN_KIND_CONTINUE: fputs("Keyword(continue)", out); break;
+	case TOKEN_KIND_RETURN: fputs("Keyword(return)", out); break;
 
-	case TK_LPAREN: fputs("Token('(')", out); break;
-	case TK_RPAREN: fputs("Token(')')", out); break;
-	case TK_LBRACKET: fputs("Token('[')", out); break;
-	case TK_RBRACKET: fputs("Token(']')", out); break;
-	case TK_LBRACE: fputs("Token('{')", out); break;
-	case TK_RBRACE: fputs("Token('}')", out); break;
-	case TK_COMMA: fputs("Token(',')", out); break;
-	case TK_SEMICOLON: fputs("Token(';')", out); break;
-	case TK_ASSIGN: fputs("Token('=')", out); break;
+	case TOKEN_KIND_LPAREN: fputs("Token('(')", out); break;
+	case TOKEN_KIND_RPAREN: fputs("Token(')')", out); break;
+	case TOKEN_KIND_LBRACKET: fputs("Token('[')", out); break;
+	case TOKEN_KIND_RBRACKET: fputs("Token(']')", out); break;
+	case TOKEN_KIND_LBRACE: fputs("Token('{')", out); break;
+	case TOKEN_KIND_RBRACE: fputs("Token('}')", out); break;
+	case TOKEN_KIND_COMMA: fputs("Token(',')", out); break;
+	case TOKEN_KIND_SEMICOLON: fputs("Token(';')", out); break;
+	case TOKEN_KIND_ASSIGN: fputs("Token('=')", out); break;
 
-	case TK_ADD: fputs("Token('+')", out); break;
-	case TK_SUBTRACT: fputs("Token('-')", out); break;
-	case TK_MULTIPLY: fputs("Token('*')", out); break;
-	case TK_DIVIDE: fputs("Token('/')", out); break;
-	case TK_MODULO: fputs("Token('%')", out); break;
+	case TOKEN_KIND_ADD: fputs("Token('+')", out); break;
+	case TOKEN_KIND_SUBTRACT: fputs("Token('-')", out); break;
+	case TOKEN_KIND_MULTIPLY: fputs("Token('*')", out); break;
+	case TOKEN_KIND_DIVIDE: fputs("Token('/')", out); break;
+	case TOKEN_KIND_MODULO: fputs("Token('%')", out); break;
 
-	case TK_ADD_ASSIGN: fputs("Token('+=')", out); break;
-	case TK_SUBTRACT_ASSIGN: fputs("Token('-=')", out); break;
-	case TK_MULTIPLY_ASSIGN: fputs("Token('*=')", out); break;
-	case TK_DIVIDE_ASSIGN: fputs("Token('/=')", out); break;
-	case TK_MODULO_ASSIGN: fputs("Token('%=')", out); break;
+	case TOKEN_KIND_ADD_ASSIGN: fputs("Token('+=')", out); break;
+	case TOKEN_KIND_SUBTRACT_ASSIGN: fputs("Token('-=')", out); break;
+	case TOKEN_KIND_MULTIPLY_ASSIGN: fputs("Token('*=')", out); break;
+	case TOKEN_KIND_DIVIDE_ASSIGN: fputs("Token('/=')", out); break;
+	case TOKEN_KIND_MODULO_ASSIGN: fputs("Token('%=')", out); break;
 
-	case TK_AND_AND: fputs("Token('&&')", out); break;
-	case TK_OR_OR: fputs("Token('||')", out); break;
+	case TOKEN_KIND_AND_AND: fputs("Token('&&')", out); break;
+	case TOKEN_KIND_OR_OR: fputs("Token('||')", out); break;
 
-	case TK_NOT: fputs("Token('!')", out); break;
-	case TK_EQUAL: fputs("Token('==')", out); break;
-	case TK_NOT_EQUAL: fputs("Token('!=')", out); break;
-	case TK_LESS_THAN: fputs("Token('<')", out); break;
-	case TK_LESS_THAN_OR_EQUAL: fputs("Token('<=')", out); break;
-	case TK_GREATER_THAN: fputs("Token('>')", out); break;
-	case TK_GREATER_THAN_OR_EQUAL: fputs("Token('>=')", out); break;
+	case TOKEN_KIND_NOT: fputs("Token('!')", out); break;
+	case TOKEN_KIND_EQUAL: fputs("Token('==')", out); break;
+	case TOKEN_KIND_NOT_EQUAL: fputs("Token('!=')", out); break;
+	case TOKEN_KIND_LESS_THAN: fputs("Token('<')", out); break;
+	case TOKEN_KIND_LESS_THAN_OR_EQUAL: fputs("Token('<=')", out); break;
+	case TOKEN_KIND_GREATER_THAN: fputs("Token('>')", out); break;
+	case TOKEN_KIND_GREATER_THAN_OR_EQUAL: fputs("Token('>=')", out); break;
 	}
 }

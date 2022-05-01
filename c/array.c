@@ -37,7 +37,7 @@ value index_array(const array *ary, int idx) {
 	if (idx < 0)
 		die("negative indexing isnt supported rn");
 
-	return idx < ary->length ? ary->elements[idx] : VUNDEF;
+	return (unsigned) idx < ary->length ? ary->elements[idx] : VUNDEF;
 }
 
 void index_assign_array(array *ary, int idx, value val) {
@@ -45,7 +45,7 @@ void index_assign_array(array *ary, int idx, value val) {
 		die("negative indexing isnt supported rn");
 
 	// Assigning out of bounds just fills it with `null`.
-	while (ary->length <= idx)
+	while (ary->length <= (unsigned) idx)
 		push_array(ary, VNULL);
 
 	ary->elements[idx] = val;

@@ -5,7 +5,7 @@
 
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {
-	case VALUE_KIND_FUNCTION: {
+	case VALUE_KIND_FUNCTION:;
 		function *func = as_function(val);
 		fprintf(out, "Function(%s, args=[", func->name);
 
@@ -18,9 +18,8 @@ void dump_value(FILE *out, value val) {
 
 		fputs("])", out);
 		break;
-	}
 
-	case VALUE_KIND_ARRAY: {
+	case VALUE_KIND_ARRAY:;
 		array *ary = as_array(val);
 
 		fprintf(out, "Array(");
@@ -33,7 +32,6 @@ void dump_value(FILE *out, value val) {
 		fputc(')', out);
 
 		break;
-	}
 
 	case VALUE_KIND_BOOLEAN:
 		fprintf(out, "Boolean(%s)", as_boolean(val) ? "true" : "false");

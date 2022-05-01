@@ -15,22 +15,6 @@ typedef enum {
 	UNARY_OP_NOT
 } unary_operator;
 
-typedef enum {
-	BINARY_OP_UNDEF,
-	BINARY_OP_ADD,
-	BINARY_OP_SUBTRACT,
-	BINARY_OP_MULTIPLY,
-	BINARY_OP_DIVIDE,
-	BINARY_OP_MODULO,
-	BINARY_OP_EQUAL,
-	BINARY_OP_NOT_EQUAL,
-	BINARY_OP_LESS_THAN,
-	BINARY_OP_LESS_THAN_OR_EQUAL,
-	BINARY_OP_GREATER_THAN,
-	BINARY_OP_GREATER_THAN_OR_EQUAL
-} binary_operator;
-
-
 struct ast_primary {
 	enum {
 		AST_PRIMARY_PAREN,
@@ -79,6 +63,23 @@ struct ast_primary {
 	};
 };
 
+typedef enum {
+	BINARY_OP_UNDEF,
+	BINARY_OP_ADD,
+	BINARY_OP_SUBTRACT,
+	BINARY_OP_MULTIPLY,
+	BINARY_OP_DIVIDE,
+	BINARY_OP_MODULO,
+	BINARY_OP_EQUAL,
+	BINARY_OP_NOT_EQUAL,
+	BINARY_OP_LESS_THAN,
+	BINARY_OP_LESS_THAN_OR_EQUAL,
+	BINARY_OP_GREATER_THAN,
+	BINARY_OP_GREATER_THAN_OR_EQUAL,
+	BINARY_OP_AND_AND,
+	BINARY_OP_OR_OR
+} binary_operator;
+
 struct ast_expression {
 	enum {
 		AST_EXPRESSION_ASSIGN,
@@ -95,13 +96,15 @@ struct ast_expression {
 		} assign;
 
 		struct {
+			binary_operator operator; // Set to `BINARY_OP_UNDEF` when normal assignment.
 			ast_primary *source;
 			ast_expression *index, *value;
 		} index_assign;
 
 		struct {
 			binary_operator operator;
-			ast_expression *lhs, *rhs;
+			ast_primary *lhs;
+			ast_expression *rhs;
 		} binary_operator;
 
 		ast_primary *primary;
@@ -168,9 +171,14 @@ struct ast_declaration {
 int run_block(const ast_block *block, value *ret, environment *env);
 ast_declaration *next_declaration(tokenizer *tzr);
 
-void free_ast_expression(ast_expression *expression);
 void free_ast_primary(ast_primary *primary);
 void free_ast_expression(ast_expression *expression);
 void free_ast_statement(ast_statement *statement);
 void free_ast_block(ast_block *block);
 void free_ast_declaration(ast_declaration *declaration);
+
+void dump_ast_primary(FILE *out, const ast_primary *primary);
+void dump_ast_expression(FILE *out, const ast_expression *expression);
+void dump_ast_statement(FILE *out, const ast_statement *statement, unsigned indent);
+void dump_ast_block(FILE *out, const ast_block *block, unsigned indent);
+void dump_ast_declaration(FILE *out, const ast_declaration *declaration);

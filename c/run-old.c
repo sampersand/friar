@@ -6,23 +6,18 @@
 #include "shared.h"
 #include "value.h"
 
-void run_declaration(const ast_declaration *declaration, environment *env) {
-	switch (declaration->kind) {
-	case AST_DECLARATION_GLOBAL:
-		declare_global(env, declaration->global.name, VNULL);
-		break;
-
-	case AST_DECLARATION_FUNCTION:;
-		function *func = new_function(
-			declaration->function.name,
-			declaration->function.number_of_arguments,
-			declaration->function.argument_names,
-			declaration->function.body
-		);
-		declare_global(env, declaration->function.name, new_function_value(func));
-		break;
-	}
+void run_declaration(const ast_declaration *d, environment *e) {
+	(void) d;
+	(void) e;
 }
+// 	if (d->kind == AST_GLOBAL) {
+// 		declare_global(e, d->name, VNULL);
+// 		return;
+// 	}
+
+// 	declare_global(e, d->name, new_function_value(new_function(d->name, d->argc, d->args, d->block)));
+// }
+
 
 // value run_expression(ast_expression *expr, environment *e);
 // value run_primary(ast_primary *prim, environment *e){

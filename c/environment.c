@@ -20,7 +20,7 @@ static void free_map(map *m) {
 }
 
 static value *lookup_in_map(map *m, const char *name) {
-	for (int i = 0; i < m->len; i++) {
+	for (unsigned i = 0; i < m->len; i++) {
 		if (!strcmp(m->entries[i].name, name))
 			return &m->entries[i].val;
 	}

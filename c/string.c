@@ -25,7 +25,7 @@ string *index_string(const string *str, int idx) {
 	if (idx < 0)
 		die("negative indexing of strings isn't currently supported");
 
-	if (str->length <= idx)
+	if (str->length <= (unsigned) idx)
 		return NULL;
 
 	string *ret = allocate_string(1);
