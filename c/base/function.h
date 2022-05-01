@@ -1,8 +1,8 @@
 #pragma once
 
 #include <assert.h>
-#include "ast.h"
-#include "environment.h"
+#include "base/ast.h"
+#include "base/environment.h"
 
 typedef struct {
 	char *name, **argv;

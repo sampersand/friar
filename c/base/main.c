@@ -1,5 +1,5 @@
-#include "token.h"
-#include "value.h"
+#include "base/token.h"
+#include "base/value.h"
 
 void run_declaration(ast_declaration*, environment*);
 

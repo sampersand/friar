@@ -4,14 +4,14 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "valuedefn.h"
-#include "shared.h"
-#include "string.h"
-#include "array.h"
-#include "number.h"
-#include "function.h"
-#include "environment.h"
-#include "ast.h"
+#include "base/valuedefn.h"
+#include "base/shared.h"
+#include "base/string.h"
+#include "base/array.h"
+#include "base/number.h"
+#include "base/function.h"
+#include "base/environment.h"
+#include "base/ast.h"
 
 typedef enum {
 	VALUE_KIND_BOOLEAN,

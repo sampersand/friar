@@ -2,8 +2,8 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include "shared.h"
-#include "valuedefn.h"
+#include "base/shared.h"
+#include "base/valuedefn.h"
 
 typedef struct {
 	unsigned refcount, length, capacity;

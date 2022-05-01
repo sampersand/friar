@@ -1,6 +1,6 @@
-#include "array.h"
-#include "shared.h"
-#include "value.h"
+#include "base/array.h"
+#include "base/shared.h"
+#include "base/value.h"
 #include <assert.h>
 
 array *new_array3(value *elements, unsigned length, unsigned capacity) {

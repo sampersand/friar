@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
-#include "value.h"
-#include "ast.h"
+#include "base/value.h"
+#include "base/ast.h"
 
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {

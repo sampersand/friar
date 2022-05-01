@@ -1,6 +1,6 @@
-#include "ast.h"
-#include "token.h"
-#include "value.h"
+#include "base/ast.h"
+#include "base/token.h"
+#include "base/value.h"
 #include <stdlib.h>
 #include <assert.h>
 

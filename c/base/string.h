@@ -2,7 +2,7 @@
 
 #include <string.h>
 #include <assert.h>
-#include "shared.h"
+#include "base/shared.h"
 
 typedef struct {
 	unsigned refcount, length;
