@@ -30,3 +30,8 @@ value lookup_global_var(const environment *env, const char *name);
 value lookup_var(const environment *env, const char *name);
 void assign_var(environment *env, const char *name, value val);
 void declare_global(environment *env, const char *name, value val);
+
+void init_map(map *m);
+void free_map(map *m);
+value *lookup_in_map(map *m, const char *name);
+void add_to_map(map *m, char *name, value val);

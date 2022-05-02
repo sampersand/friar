@@ -64,6 +64,11 @@ struct ast_primary {
 };
 
 typedef enum {
+	SHORT_CIRCUIT_AND_AND,
+	SHORT_CIRCUIT_OR_OR
+} short_circuit_operator;
+
+typedef enum {
 	BINARY_OP_UNDEF,
 	BINARY_OP_ADD,
 	BINARY_OP_SUBTRACT,
@@ -76,14 +81,13 @@ typedef enum {
 	BINARY_OP_LESS_THAN_OR_EQUAL,
 	BINARY_OP_GREATER_THAN,
 	BINARY_OP_GREATER_THAN_OR_EQUAL,
-	BINARY_OP_AND_AND,
-	BINARY_OP_OR_OR
 } binary_operator;
 
 struct ast_expression {
 	enum {
 		AST_EXPRESSION_ASSIGN,
 		AST_EXPRESSION_INDEX_ASSIGN,
+		AST_EXPRESSION_SHORT_CIRCUIT_OPERATOR,
 		AST_EXPRESSION_BINARY_OPERATOR,
 		AST_EXPRESSION_PRIMARY
 	} kind;
@@ -100,6 +104,12 @@ struct ast_expression {
 			ast_primary *source;
 			ast_expression *index, *value;
 		} index_assign;
+
+		struct {
+			short_circuit_operator operator;
+			ast_primary *lhs;
+			ast_expression *rhs;
+		} short_circuit_operator;
 
 		struct {
 			binary_operator operator;

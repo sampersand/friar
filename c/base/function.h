@@ -4,13 +4,21 @@
 #include "base/ast.h"
 #include "base/environment.h"
 
+#ifdef AST_WALKER
+typedef ast_block function_body;
+#else
+typedef struct codeblock function_body;
+value run_codeblock(const function_body *block, environment *env);
+void free_codeblock(function_body *block);
+#endif
+
 typedef struct {
 	char *name, **argv;
 	unsigned argc, refcount;
-	ast_block *body;
+	function_body *body;
 } function;
 
-function *new_function(char *name, unsigned argc, char **argv, ast_block *body);
+function *new_function(char *name, unsigned argc, char **argv, function_body *body);
 
 void deallocate_function(function *func);
 

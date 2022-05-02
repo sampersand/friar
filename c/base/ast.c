@@ -178,8 +178,6 @@ static binary_operator binary_operator_from_token_kind(token_kind kind) {
 	case TOKEN_KIND_MULTIPLY:              return BINARY_OP_MULTIPLY;
 	case TOKEN_KIND_DIVIDE:                return BINARY_OP_DIVIDE;
 	case TOKEN_KIND_MODULO:                return BINARY_OP_MODULO;
-	case TOKEN_KIND_AND_AND:               return BINARY_OP_AND_AND;
-	case TOKEN_KIND_OR_OR:                 return BINARY_OP_OR_OR;
 	case TOKEN_KIND_EQUAL:                 return BINARY_OP_EQUAL;
 	case TOKEN_KIND_NOT_EQUAL:             return BINARY_OP_NOT_EQUAL;
 	case TOKEN_KIND_LESS_THAN:             return BINARY_OP_LESS_THAN;
@@ -204,7 +202,7 @@ static ast_expression *parse_expression(tokenizer *tzr) {
 	case TOKEN_KIND_MULTIPLY_ASSIGN:
 	case TOKEN_KIND_DIVIDE_ASSIGN:
 	case TOKEN_KIND_MODULO_ASSIGN:
-	case TOKEN_KIND_ASSIGN:;
+	case TOKEN_KIND_ASSIGN: {
 		ast_expression *rhs = parse_expression(tzr);
 		if (rhs == NULL)
 			parse_error(tzr, "expected an expression after `=`");
@@ -230,6 +228,20 @@ static ast_expression *parse_expression(tokenizer *tzr) {
 		}
 
 		free(primary);
+		break;
+	}
+
+	case TOKEN_KIND_AND_AND:
+	case TOKEN_KIND_OR_OR:
+		expression->kind = AST_EXPRESSION_SHORT_CIRCUIT_OPERATOR;
+		expression->short_circuit_operator.operator =
+			tkn.kind == TOKEN_KIND_AND_AND ? SHORT_CIRCUIT_AND_AND : SHORT_CIRCUIT_OR_OR;
+		expression->short_circuit_operator.lhs = primary;
+		expression->short_circuit_operator.rhs = parse_expression(tzr);
+
+		if (expression->short_circuit_operator.rhs == NULL)
+			parse_error(tzr, "expected RHS after `&&` / `||`");
+
 		break;
 
 	case TOKEN_KIND_ADD:
@@ -511,8 +523,6 @@ static const char *binary_operator_to_string(binary_operator op) {
 	case BINARY_OP_LESS_THAN_OR_EQUAL: return "<=";
 	case BINARY_OP_GREATER_THAN: return ">";
 	case BINARY_OP_GREATER_THAN_OR_EQUAL: return ">=";
-	case BINARY_OP_AND_AND: return "&&";
-	case BINARY_OP_OR_OR: return "||";
 	}
 }
 
@@ -530,6 +540,16 @@ void dump_ast_expression(FILE *out, const ast_expression *expression) {
 		dump_ast_expression(out, expression->index_assign.index);
 		fprintf(out, "] %s = ", binary_operator_to_string(expression->index_assign.operator));
 		dump_ast_expression(out, expression->index_assign.value);
+		break;
+
+	case AST_EXPRESSION_SHORT_CIRCUIT_OPERATOR:
+		dump_ast_primary(out, expression->short_circuit_operator.lhs);
+		if (expression->short_circuit_operator.operator == SHORT_CIRCUIT_OR_OR) {
+			fputs(" || ", out);
+		} else {
+			fputs(" && ", out);
+		}
+		dump_ast_expression(out, expression->short_circuit_operator.rhs);
 		break;
 
 	case AST_EXPRESSION_BINARY_OPERATOR:
@@ -675,6 +695,11 @@ void free_ast_expression(ast_expression *expression) {
 		free_ast_primary(expression->index_assign.source);
 		free_ast_expression(expression->index_assign.index);
 		free_ast_expression(expression->index_assign.value);
+		break;
+
+	case AST_EXPRESSION_SHORT_CIRCUIT_OPERATOR:
+		free_ast_primary(expression->short_circuit_operator.lhs);
+		free_ast_expression(expression->short_circuit_operator.rhs);
 		break;
 
 	case AST_EXPRESSION_BINARY_OPERATOR:

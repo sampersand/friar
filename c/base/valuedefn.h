@@ -1,5 +1,9 @@
 #pragma once
 
+// This file is needed because many other files (such as `array.h`) rely upon `value`
+// being defined. However, `value.h` relies upon `array` and friends being defined for
+// functions like creation and casting.
+
 /*
 `value`s are actually encoded using bit-masking.
 00...000 = VFALSE

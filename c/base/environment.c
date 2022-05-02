@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <assert.h>
 
-static void init_map(map *m) {
+void init_map(map *m) {
 	m->len = 0;
 	m->cap = 0;
 	m->entries = NULL;
 }
 
-static void free_map(map *m) {
+void free_map(map *m) {
 	for (unsigned i = 0; i < m->len; i++) {
 		free(m->entries[i].name);
 		free_value(m->entries[i].val);
@@ -19,7 +19,7 @@ static void free_map(map *m) {
 	free(m->entries);
 }
 
-static value *lookup_in_map(map *m, const char *name) {
+value *lookup_in_map(map *m, const char *name) {
 	for (unsigned i = 0; i < m->len; i++) {
 		if (!strcmp(m->entries[i].name, name))
 			return &m->entries[i].val;
@@ -28,7 +28,7 @@ static value *lookup_in_map(map *m, const char *name) {
 	return NULL;
 }
 
-static void add_to_map(map *m, char *name, value val) {
+void add_to_map(map *m, char *name, value val) {
 	assert(lookup_in_map(m, name) == NULL);
 
 	if (m->len == m->cap) {

@@ -5,7 +5,7 @@
 
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {
-	case VALUE_KIND_FUNCTION:;
+	case VALUE_KIND_FUNCTION: {
 		function *func = as_function(val);
 		fprintf(out, "Function(%s, args=[", func->name);
 
@@ -18,8 +18,9 @@ void dump_value(FILE *out, value val) {
 
 		fputs("])", out);
 		break;
+	}
 
-	case VALUE_KIND_ARRAY:;
+	case VALUE_KIND_ARRAY: {
 		array *ary = as_array(val);
 
 		fprintf(out, "Array(");
@@ -32,6 +33,7 @@ void dump_value(FILE *out, value val) {
 		fputc(')', out);
 
 		break;
+	}
 
 	case VALUE_KIND_BOOLEAN:
 		fprintf(out, "Boolean(%s)", as_boolean(val) ? "true" : "false");
@@ -122,7 +124,7 @@ value index_value(value val, value idx) {
 	number num_idx = as_number(idx);
 
 	switch (classify(val)) {
-	case VALUE_KIND_STRING:;
+	case VALUE_KIND_STRING: {
 		string *str = index_string(as_string(val), num_idx);
 
 		if (str == NULL) {
@@ -131,8 +133,9 @@ value index_value(value val, value idx) {
 		}
 
 		return new_string_value(str);
+	}
 
-	case VALUE_KIND_ARRAY:;
+	case VALUE_KIND_ARRAY: {
 		value ret = index_array(as_array(val), num_idx);
 
 		if (ret == VUNDEF) {
@@ -141,6 +144,7 @@ value index_value(value val, value idx) {
 		}
 
 		return ret;
+	}
 
 	default:
 		die("can only index into arrays or strs");

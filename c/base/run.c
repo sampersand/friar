@@ -8,11 +8,7 @@
 
 void run_declaration(const ast_declaration *declaration, environment *env) {
 	switch (declaration->kind) {
-	case AST_DECLARATION_GLOBAL:
-		declare_global(env, declaration->global.name, VNULL);
-		break;
-
-	case AST_DECLARATION_FUNCTION:;
+	case AST_DECLARATION_FUNCTION: {
 		function *func = new_function(
 			declaration->function.name,
 			declaration->function.number_of_arguments,
@@ -20,6 +16,11 @@ void run_declaration(const ast_declaration *declaration, environment *env) {
 			declaration->function.body
 		);
 		declare_global(env, declaration->function.name, new_function_value(func));
+		break;
+	}
+
+	case AST_DECLARATION_GLOBAL:
+		declare_global(env, declaration->global.name, VNULL);
 		break;
 	}
 }
