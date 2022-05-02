@@ -31,6 +31,9 @@ enum {
 };
 
 static inline value_kind classify(value val) {
+	if (val == VUNDEF) strlen(malloc(1));
+	assert(val != VUNDEF);
+
 	if (val == VNULL)
 		return VALUE_KIND_NULL;
 
@@ -42,7 +45,7 @@ static inline value_kind classify(value val) {
 	case VALUE_TAG_FUNCTION: return VALUE_KIND_FUNCTION;
 	case VALUE_TAG_ARRAY: return VALUE_KIND_ARRAY;
 	case VALUE_TAG_NUMBER: return VALUE_KIND_NUMBER;
-	default: die("[bug] invalid value tag: %lld", val & VALUE_TAG_MASK);
+	default: die("[bug] invalid value tag: %lld (%llx)", val & VALUE_TAG_MASK, val);
 	}
 }
 

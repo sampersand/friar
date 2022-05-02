@@ -1,7 +1,6 @@
 #pragma once
 
 typedef enum {
-	OPCODE_NOP,
 	OPCODE_MOV,
 	OPCODE_ARRAY_LITERAL,
 
@@ -31,6 +30,8 @@ typedef enum {
 	OPCODE_INDEX,
 	OPCODE_INDEX_ASSIGN
 } opcode;
+
+const char *opcode_repr(opcode op);
 
 typedef union {
 	opcode op;

@@ -18,7 +18,8 @@ base: base/array.o base/ast.o base/environment.o base/function.o base/main.o bas
 bytecode: bytecode/codeblock.c
 
 main: base/array.o base/ast.o base/environment.o base/function.o base/main.o base/number.o \
-		base/shared.o base/string.o base/token.o base/value.o bytecode/codeblock.o bytecode/compile.o
+		base/shared.o base/string.o base/token.o base/value.o bytecode/codeblock.o bytecode/compile.o \
+		bytecode/bytecode.o
 	$(CC) $(CFLAGS) -o $@ $+
 
 *.o: *.c

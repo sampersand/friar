@@ -33,28 +33,40 @@ value run_codeblock(const codeblock *block, environment *env) {
 
 	value return_value = run_vm(&vm);
 
-	for (unsigned i = 0; i < block->number_of_locals; i++)
-		free_value(locals[i]);
-
-	free(vm.locals);
+	for (unsigned i = 0; i < block->number_of_locals; i++) {
+		if (locals[i] != VUNDEF)
+			free_value(locals[i]);
+	}
 
 	return return_value;
 }
 
 static unsigned next_count(virtual_machine *vm) {
 	unsigned count = vm->block->code[vm->instruction_pointer].count;
+	LOG("vm[% 3d] = count(%d)", vm->instruction_pointer, count);
 	vm->instruction_pointer++;
 	return count;
 }
 
 static opcode next_opcode(virtual_machine *vm) {
 	opcode op = vm->block->code[vm->instruction_pointer].op;
+	LOG("vm[% 3d] = op(%s)", vm->instruction_pointer, opcode_repr(op));
 	vm->instruction_pointer++;
 	return op;
 }
 
 static value next_local(virtual_machine *vm) {
-	return vm->locals[next_count(vm)];
+	unsigned count = vm->block->code[vm->instruction_pointer].count;
+	value local = vm->locals[count];
+
+	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
+#ifndef NDEBUG
+	dump_value(stdout, local);
+	puts("}");
+#endif
+
+	vm->instruction_pointer++;
+	return local;
 }
 
 static void set_next_local(virtual_machine *vm, value val) {
@@ -64,10 +76,6 @@ static void set_next_local(virtual_machine *vm, value val) {
 static value run_vm(virtual_machine *vm) {
 	while (vm->instruction_pointer < vm->block->code_length) {
 		switch (next_opcode(vm)) {
-
-		case OPCODE_NOP:
-			break;
-
 		case OPCODE_MOV:
 			set_next_local(vm, next_local(vm));
 			break;
@@ -80,11 +88,19 @@ static value run_vm(virtual_machine *vm) {
 				push_array(ary, next_local(vm));
 
 			set_next_local(vm, new_array_value(ary));
+			break;
 		}
 
-		case OPCODE_LOAD_CONSTANT:
-			set_next_local(vm, vm->block->constants[next_count(vm)]);
+		case OPCODE_LOAD_CONSTANT: {
+			value constant = vm->block->constants[next_count(vm)];
+		#ifndef NDEBUG
+			LOGN("constant=");
+			dump_value(stdout, constant);
+			puts("");
+		#endif
+			set_next_local(vm, constant);
 			break;
+		}
 
 		case OPCODE_LOAD_GLOBAL_VARIABLE:
 			// set_next_local(lookup_global_var

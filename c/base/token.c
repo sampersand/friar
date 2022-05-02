@@ -63,17 +63,17 @@ static token parse_identifier(tokenizer *tzr) {
 	unsigned length = tzr->stream - start;
 
 	// check for predefined identifiers
-	if (!strncmp(start, "true", length)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VTRUE };
-	if (!strncmp(start, "false", length)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VFALSE };
-	if (!strncmp(start, "null", length)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VNULL };
-	if (!strncmp(start, "global", length)) return (token) { .kind = TOKEN_KIND_GLOBAL };
-	if (!strncmp(start, "function", length)) return (token) { .kind = TOKEN_KIND_FUNCTION };
-	if (!strncmp(start, "if", length)) return (token) { .kind = TOKEN_KIND_IF };
-	if (!strncmp(start, "else", length)) return (token) { .kind = TOKEN_KIND_ELSE };
-	if (!strncmp(start, "while", length)) return (token) { .kind = TOKEN_KIND_WHILE };
-	if (!strncmp(start, "break", length)) return (token) { .kind = TOKEN_KIND_BREAK };
-	if (!strncmp(start, "continue", length)) return (token) { .kind = TOKEN_KIND_CONTINUE };
-	if (!strncmp(start, "return", length)) return (token) { .kind = TOKEN_KIND_RETURN };
+	if (!strncmp(start, "true", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VTRUE };
+	if (!strncmp(start, "false", 5)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VFALSE };
+	if (!strncmp(start, "null", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VNULL };
+	if (!strncmp(start, "global", 6)) return (token) { .kind = TOKEN_KIND_GLOBAL };
+	if (!strncmp(start, "function", 8)) return (token) { .kind = TOKEN_KIND_FUNCTION };
+	if (!strncmp(start, "if", 2)) return (token) { .kind = TOKEN_KIND_IF };
+	if (!strncmp(start, "else", 4)) return (token) { .kind = TOKEN_KIND_ELSE };
+	if (!strncmp(start, "while", 5)) return (token) { .kind = TOKEN_KIND_WHILE };
+	if (!strncmp(start, "break", 5)) return (token) { .kind = TOKEN_KIND_BREAK };
+	if (!strncmp(start, "continue", 8)) return (token) { .kind = TOKEN_KIND_CONTINUE };
+	if (!strncmp(start, "return", 6)) return (token) { .kind = TOKEN_KIND_RETURN };
 
 	// it's a normal identifier, retunr that.
 	return (token) { .kind = TOKEN_KIND_IDENTIFIER, .str = strndup(start, length) };

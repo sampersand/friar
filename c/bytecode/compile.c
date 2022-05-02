@@ -66,6 +66,15 @@ static unsigned next_local_index(codeblock_builder *builder) {
 	return local_index;
 }
 
+// returns -1 if it doesnt exist.
+static int lookup_global_variable(codeblock_builder *builder, const char *name) {
+	(void) builder;
+	(void) name;
+	return -1;
+	die("todo");
+	return -1;
+}
+
 static unsigned lookup_local_variable(codeblock_builder *builder, char *name) {
 	for (unsigned i = 0; i < builder->local_variables.length; i++) {
 		if (!strcmp(builder->local_variables.entries[i].name, name)) {
@@ -104,25 +113,30 @@ static void set_bytecode(codeblock_builder *builder, bytecode bc) {
 }
 
 static void set_opcode(codeblock_builder *builder, opcode op) {
+	LOG("code[% 3d] = op(%s)", builder->bytecode.length, opcode_repr(op));
 	set_bytecode(builder, (bytecode) { .op = op});
 }
 
 static void set_count(codeblock_builder *builder, unsigned count) {
-	set_bytecode(builder, (bytecode) { .count = count} );
+	LOG("code[% 3d] = count(%d)", builder->bytecode.length, count);
+	set_bytecode(builder, (bytecode) { .count = count } );
 }
 
 static void set_local(codeblock_builder *builder, unsigned local) {
-	set_count(builder, local);
+	LOG("code[% 3d] = local(%d)", builder->bytecode.length, local);
+	set_bytecode(builder, (bytecode) { .count = local } );
 }
 
 static unsigned defer_jump(codeblock_builder *builder) {
+	LOG("code[% 3d] = <defered jump>", builder->bytecode.length);
 	unsigned code_position = builder->bytecode.length;
-	set_count(builder, 0xAABBCCDD); // Set some byte in case we need to reallocate.
+	set_bytecode(builder, (bytecode) { .count = 0xAABBCCDD } );
 	return code_position;
 }
 
 static void set_jump_dst(codeblock_builder *builder, unsigned jmp_src) {
 	assert(builder->bytecode.code[jmp_src].count == 0xAABBCCDD);
+	LOG("code[% 3d] = count(%d) (update)", builder->bytecode.length, jmp_src);
 	builder->bytecode.code[jmp_src].count = builder->bytecode.length;
 }
 
@@ -224,11 +238,20 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		break;
 	}
 
-	case AST_PRIMARY_VARIABLE:
-		set_opcode(builder, OPCODE_MOV);
-		set_local(builder, lookup_local_variable(builder, primary->variable.name));
-		set_local(builder, target_local);
+	case AST_PRIMARY_VARIABLE: {
+		int global_index = lookup_global_variable(builder, primary->variable.name);
+
+		if (global_index != -1) {
+			set_opcode(builder, OPCODE_LOAD_GLOBAL_VARIABLE);
+			set_count(builder, global_index);
+			set_local(builder, target_local);
+		} else {
+			set_opcode(builder, OPCODE_MOV);
+			set_local(builder, lookup_local_variable(builder, primary->variable.name));
+			set_local(builder, target_local);			
+		}
 		break;
+	}
 
 
 	case AST_PRIMARY_LITERAL:
@@ -238,11 +261,67 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 	free(primary);
 }
 
+static opcode binary_operator_to_opcode(binary_operator operator) {
+	switch (operator) {
+	case BINARY_OP_UNDEF: die("[bug] BINARY_OP_UNDEF outside of an assignment");
+	case BINARY_OP_ADD:                   return OPCODE_ADD;
+	case BINARY_OP_SUBTRACT:              return OPCODE_SUBTRACT;
+	case BINARY_OP_MULTIPLY:              return OPCODE_MULTIPLY;
+	case BINARY_OP_DIVIDE:                return OPCODE_DIVIDE;
+	case BINARY_OP_MODULO:                return OPCODE_MODULO;
+	case BINARY_OP_EQUAL:                 return OPCODE_EQUAL;
+	case BINARY_OP_NOT_EQUAL:             return OPCODE_NOT_EQUAL;
+	case BINARY_OP_LESS_THAN:             return OPCODE_LESS_THAN;
+	case BINARY_OP_LESS_THAN_OR_EQUAL:    return OPCODE_LESS_THAN_OR_EQUAL;
+	case BINARY_OP_GREATER_THAN:          return OPCODE_GREATER_THAN;
+	case BINARY_OP_GREATER_THAN_OR_EQUAL: return OPCODE_GREATER_THAN_OR_EQUAL;
+	}
+}
+
+
 static void compile_expression(codeblock_builder *builder, ast_expression *expression, unsigned target_local) {
 	switch (expression->kind) {
-	case AST_EXPRESSION_ASSIGN:
-		die("todo; expression assign");
-		
+	case AST_EXPRESSION_ASSIGN: {
+		compile_expression(builder, expression->assign.value, target_local);
+
+		int global_index = lookup_global_variable(builder, expression->assign.name);
+		if (global_index != -1)
+			goto assign_global;
+
+		unsigned local_variable = lookup_local_variable(builder, expression->assign.name);
+
+		if (expression->assign.operator != BINARY_OP_UNDEF) {
+			set_opcode(builder, binary_operator_to_opcode(expression->assign.operator));
+			set_local(builder, local_variable);
+			set_local(builder, target_local);
+			set_local(builder, target_local);
+		}
+
+		set_opcode(builder, OPCODE_MOV);
+		set_local(builder, target_local);
+		set_local(builder, local_variable);
+		break;
+
+	assign_global:
+
+		if (expression->assign.operator != BINARY_OP_UNDEF) {
+			unsigned old_local_index = next_local_index(builder);
+			set_opcode(builder, OPCODE_LOAD_GLOBAL_VARIABLE);
+			set_count(builder, global_index);
+			set_local(builder, old_local_index);
+
+			set_opcode(builder, binary_operator_to_opcode(expression->assign.operator));
+			set_local(builder, old_local_index);
+			set_local(builder, target_local);
+			set_local(builder, old_local_index);
+		}
+
+		set_opcode(builder, OPCODE_STORE_GLOBAL_VARIABLE);
+		set_local(builder, global_index);
+		set_local(builder, target_local);
+		break;
+	}
+
 	case AST_EXPRESSION_INDEX_ASSIGN: {
 		unsigned source_local = next_local_index(builder);
 		unsigned index_local = next_local_index(builder);
@@ -250,6 +329,19 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		compile_primary(builder, expression->index_assign.source, source_local);
 		compile_expression(builder, expression->index_assign.index, index_local);
 		compile_expression(builder, expression->index_assign.value, target_local);
+
+		if (expression->index_assign.operator != BINARY_OP_UNDEF) {
+			unsigned old_value_local = next_local_index(builder);
+			set_opcode(builder, OPCODE_INDEX);
+			set_local(builder, source_local);
+			set_local(builder, index_local);
+			set_local(builder, old_value_local);
+
+			set_opcode(builder, binary_operator_to_opcode(expression->index_assign.operator));
+			set_local(builder, old_value_local);
+			set_local(builder, target_local);
+			set_local(builder, target_local);
+		}
 
 		set_opcode(builder, OPCODE_INDEX_ASSIGN);
 		set_local(builder, source_local);
@@ -270,6 +362,7 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		unsigned jump_to_short_circuit_end = defer_jump(builder);
 		compile_expression(builder, expression->short_circuit_operator.rhs, target_local);
 		set_jump_dst(builder, jump_to_short_circuit_end);
+		break;
 	}
 
 	case AST_EXPRESSION_BINARY_OPERATOR: {
@@ -277,23 +370,11 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		compile_primary(builder, expression->binary_operator.lhs, lhs_local);
 		compile_expression(builder, expression->binary_operator.rhs, target_local);
 
-		switch (expression->binary_operator.operator) {
-		case BINARY_OP_UNDEF: die("[bug] BINARY_OP_UNDEF outside of an assignment");
-		case BINARY_OP_ADD:                   set_opcode(builder, OPCODE_ADD); break;
-		case BINARY_OP_SUBTRACT:              set_opcode(builder, OPCODE_SUBTRACT); break;
-		case BINARY_OP_MULTIPLY:              set_opcode(builder, OPCODE_MULTIPLY); break;
-		case BINARY_OP_DIVIDE:                set_opcode(builder, OPCODE_DIVIDE); break;
-		case BINARY_OP_MODULO:                set_opcode(builder, OPCODE_MODULO); break;
-		case BINARY_OP_EQUAL:                 set_opcode(builder, OPCODE_EQUAL); break;
-		case BINARY_OP_NOT_EQUAL:             set_opcode(builder, OPCODE_NOT_EQUAL); break;
-		case BINARY_OP_LESS_THAN:             set_opcode(builder, OPCODE_LESS_THAN); break;
-		case BINARY_OP_LESS_THAN_OR_EQUAL:    set_opcode(builder, OPCODE_LESS_THAN_OR_EQUAL); break;
-		case BINARY_OP_GREATER_THAN:          set_opcode(builder, OPCODE_GREATER_THAN); break;
-		case BINARY_OP_GREATER_THAN_OR_EQUAL: set_opcode(builder, OPCODE_GREATER_THAN_OR_EQUAL); break;
-		}
+		set_opcode(builder, binary_operator_to_opcode(expression->binary_operator.operator));
 		set_local(builder, lhs_local);
 		set_local(builder, target_local);
 		set_local(builder, target_local);
+		break;
 	}
 
 	case AST_EXPRESSION_PRIMARY:
@@ -303,38 +384,6 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 
 	free(expression);
 }
-/*
-struct ast_expression {
-	enum {
-		AST_EXPRESSION_ASSIGN,
-		AST_EXPRESSION_INDEX_ASSIGN,
-		AST_EXPRESSION_BINARY_OPERATOR,
-		AST_EXPRESSION_PRIMARY
-	} kind;
-
-	union {
-		struct {
-			binary_operator operator; // Set to `BINARY_OP_UNDEF` when normal assignment.
-			char *name;
-			ast_expression *value;
-		} assign;
-
-		struct {
-			binary_operator operator; // Set to `BINARY_OP_UNDEF` when normal assignment.
-			ast_primary *source;
-			ast_expression *index, *value;
-		} index_assign;
-
-		struct {
-			binary_operator operator;
-			ast_primary *lhs;
-			ast_expression *rhs;
-		} binary_operator;
-
-		ast_primary *primary;
-	};
-};
-*/
 
 static void compile_block(codeblock_builder *builder, ast_block *block);
 static void compile_statement(codeblock_builder *builder, ast_statement *statement) {
@@ -380,6 +429,7 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 		if (builder->whiles.length == MAX_NUMBER_OF_NESTED_WHILES)
 			die("too many nested whiles encountered; only %d max allowed", MAX_NUMBER_OF_NESTED_WHILES);
 
+		builder->whiles.start_of_conditions[builder->whiles.length] = beginning_of_condition;
 		builder->whiles.breaks[builder->whiles.length].length = 0;
 		builder->whiles.length++;
 		compile_block(builder, statement->while_.body);
