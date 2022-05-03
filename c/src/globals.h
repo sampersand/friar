@@ -6,7 +6,7 @@ typedef struct {
 	value val;
 } global_variable_entry;
 
-typedef struct global_variables {
+typedef struct {
 	unsigned length, capacity;
 	global_variable_entry *entries;
 } global_variables;

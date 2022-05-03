@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
-function *new_function(char *name, unsigned argc, char **argv, function_body *body) {
+function *new_function(char *name, unsigned argc, char **argv, codeblock *body) {
 	assert(name == NULL || strlen(name) != 0);
 
 	function *func = xmalloc(sizeof(function));

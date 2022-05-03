@@ -4,19 +4,19 @@
 #include "ast.h"
 #include "environment.h"
 #include "valuedefn.h"
+#include "codeblock.h"
 #include <stdalign.h>
 
-typedef struct codeblock function_body;
-value run_codeblock(const struct codeblock *block, unsigned argc, const value *argv, environment *env);
-void free_codeblock(function_body *block);
+value run_codeblock(const codeblock *block, unsigned argc, const value *argv, environment *env);
+void free_codeblock(codeblock *block);
 
 typedef struct {
-	VALUE_ALIGNMENT function_body *body;
+	VALUE_ALIGNMENT codeblock *body;
 	char *name, **argv;
 	unsigned argc, refcount;
 } function;
 
-function *new_function(char *name, unsigned argc, char **argv, function_body *body);
+function *new_function(char *name, unsigned argc, char **argv, codeblock *body);
 
 void deallocate_function(function *func);
 

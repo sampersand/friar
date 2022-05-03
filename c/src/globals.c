@@ -31,7 +31,6 @@ void free_global_variables(global_variables *globals) {
 	free(globals);
 }
 
-
 int lookup_global_variable(const global_variables *globals, const char *name) {
 	for (unsigned i = 0; i < globals->length; i++) {
 		if (!strcmp(name, globals->entries[i].name))
