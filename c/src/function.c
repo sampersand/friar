@@ -25,11 +25,7 @@ void deallocate_function(function *func) {
 
 	free(func->argv);
 	free(func->name);
-#ifdef AST_WALKER
-	free_ast_block(func->body);
-#else
 	free_codeblock(func->body);
-#endif
 	free(func);
 }
 
@@ -41,14 +37,7 @@ value call_function(const function *func, unsigned argc, value *argv, environmen
 
 	value ret;
 
-#ifdef AST_WALKER
-	for (unsigned i = 0; i < argc; i++)
-		assign_var(env, func->argv[i], argv[i]);
-
-	run_block(func->body, &ret, env);
-#else
 	ret = run_codeblock(func->body, argc, argv, env);
-#endif
 
 	leave_stackframe(env);
 	return ret;

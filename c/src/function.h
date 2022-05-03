@@ -6,13 +6,9 @@
 #include "valuedefn.h"
 #include <stdalign.h>
 
-#ifdef AST_WALKER
-typedef ast_block function_body;
-#else
 typedef struct codeblock function_body;
 value run_codeblock(const struct codeblock *block, unsigned argc, const value *argv, environment *env);
 void free_codeblock(function_body *block);
-#endif
 
 typedef struct {
 	VALUE_ALIGNMENT function_body *body;

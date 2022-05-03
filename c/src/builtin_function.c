@@ -24,11 +24,13 @@ static value builtin_to_str_fn(const value *arguments) {
 }
 
 static value builtin_to_num_fn(const value *arguments) {
+	TODO("to num");
 	(void) arguments;
 	return VNULL;
 }
 
 static value builtin_prompt_fn(const value *arguments) {
+	TODO("prompt");
 	(void) arguments;
 	return VNULL;
 }
@@ -56,6 +58,7 @@ static value builtin_println_fn(const value *arguments) {
 
 static value builtin_random_fn(const value *arguments) {
 	(void) arguments;
+	TODO("random fn");
 	return VNULL;
 }
 

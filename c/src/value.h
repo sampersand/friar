@@ -34,8 +34,6 @@ enum {
 };
 
 static inline value_kind classify(value val) {
-	if (val == VUNDEF)
-		strlen(xmalloc(2));
 	assert(val != VUNDEF);
 
 	if (val == VNULL)
