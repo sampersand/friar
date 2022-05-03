@@ -2,7 +2,7 @@
 
 const char *opcode_repr(opcode op) {
 	switch (op) {
-	case OPCODE_MOV: return "OPCODE_MOV";
+	case OPCODE_MOVE: return "OPCODE_MOVE";
 	case OPCODE_ARRAY_LITERAL: return "OPCODE_ARRAY_LITERAL";
 
 	case OPCODE_LOAD_CONSTANT: return "OPCODE_LOAD_CONSTANT";

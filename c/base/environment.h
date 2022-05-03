@@ -15,9 +15,11 @@ typedef struct {
 	map_entry *entries;
 } map;
 
+struct global_variables;
 typedef struct _environment {
 	unsigned stack_pointer;
 	map globals, stackframes[STACKFRAME_LIMIT];
+	struct global_variables *globals1;
 } environment;
 
 void init_environment(environment *env);

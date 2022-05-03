@@ -20,14 +20,15 @@ int main(int argc, char **argv) {
 		compile_declaration(&comp, d);
 	}
 
+	env.globals1 = comp.globals;
 
 	// 	exit(0);
 
-	value *v;
-	if ((v = lookup_in_map(&comp.globals, "main")) == NULL)
+	int main_index = lookup_global_variable(comp.globals, "main");
+	if (main_index == -1)
 		die("you must define a `main` function");
 
-	value ret = call_value(*v, 0, 0, &env);
+	value ret = call_value(fetch_global_variable(comp.globals, main_index), 0, NULL, &env);
 	if (is_number(ret))
 		return as_number(ret);
 	// free_environment(&env);

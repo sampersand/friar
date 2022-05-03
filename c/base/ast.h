@@ -123,6 +123,7 @@ struct ast_expression {
 
 struct ast_statement {
 	enum {
+		AST_STATEMENT_LOCAL,
 		AST_STATEMENT_RETURN,
 		AST_STATEMENT_IF,
 		AST_STATEMENT_WHILE,
@@ -132,6 +133,11 @@ struct ast_statement {
 	} kind;
 
 	union {
+		struct {
+			char *name;
+			ast_expression *initializer; // is `NULL` if no default is given.
+		} local;
+
 		struct {
 			ast_expression *expression; // is `NULL` if there's no explicit value given.
 		} return_;

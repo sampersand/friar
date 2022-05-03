@@ -35,6 +35,15 @@ static bool guard(tokenizer *tzr, token_kind kind) {
 	fprintf(stderr, "parse error at line %d: ", tzr->lineno), \
 	fprintf(stderr, __VA_ARGS__), exit(1))
 
+static char *expect_identifier(tokenizer *tzr, const char *whence) {
+	token tkn = advance(tzr);
+
+	if (tkn.kind != TOKEN_KIND_IDENTIFIER)
+		parse_error(tzr, "expected identifier %s", whence);
+
+	return tkn.str;
+}
+
 static ast_expression *parse_expression(tokenizer *tzr);
 static ast_primary *parse_primary(tokenizer *tzr) {
 	ast_primary *primary = xmalloc(sizeof(ast_primary));
@@ -270,6 +279,7 @@ static ast_expression *parse_expression(tokenizer *tzr) {
 
 		expression->kind = AST_EXPRESSION_PRIMARY;
 		expression->primary = primary;
+		break;
 	}
 
 	return expression;
@@ -282,6 +292,23 @@ static ast_statement *parse_statement(tokenizer *tzr) {
 	token tkn = advance(tzr);
 
 	switch (tkn.kind) {
+	case TOKEN_KIND_LOCAL:
+		statement->kind = AST_STATEMENT_LOCAL;
+		statement->local.name = expect_identifier(tzr, "local name");
+
+		if (guard(tzr, TOKEN_KIND_ASSIGN)) {
+			statement->local.initializer = parse_expression(tzr);
+			if (statement->local.initializer == NULL)
+				parse_error(tzr, "expected expression after `=` in local declaration");
+		} else {
+			statement->local.initializer = NULL;
+		}
+
+		if (!guard(tzr, TOKEN_KIND_SEMICOLON))
+			parse_error(tzr, "expected `;` after `local`");
+
+		break;
+
 	case TOKEN_KIND_RETURN:
 		statement->kind = AST_STATEMENT_RETURN;
 		statement->return_.expression = parse_expression(tzr); // note this can be null.
@@ -344,6 +371,7 @@ static ast_statement *parse_statement(tokenizer *tzr) {
 
 		if (!guard(tzr, TOKEN_KIND_SEMICOLON))
 			parse_error(tzr, "expected `;` after expression");
+		break;
 	}
 
 	return statement;
@@ -381,15 +409,6 @@ static ast_block *parse_block(tokenizer *tzr) {
 	}
 
 	return block;
-}
-
-static char *expect_identifier(tokenizer *tzr, const char *whence) {
-	token tkn = advance(tzr);
-
-	if (tkn.kind != TOKEN_KIND_IDENTIFIER)
-		parse_error(tzr, "expected identifier %s", whence);
-
-	return tkn.str;
 }
 
 ast_declaration *next_declaration(tokenizer *tzr) {
@@ -566,6 +585,15 @@ void dump_ast_expression(FILE *out, const ast_expression *expression) {
 
 void dump_ast_statement(FILE *out, const ast_statement *statement, unsigned indent) {
 	switch (statement->kind) {
+	case AST_STATEMENT_LOCAL:
+		fprintf(out, "local %s", statement->local.name);
+		if (statement->local.initializer != NULL) {
+			fputs(" = ", out);
+			dump_ast_expression(out, statement->local.initializer);
+		}
+		fputc(';', out);
+		break;
+
 	case AST_STATEMENT_RETURN:
 		fputs("return", out);
 		if (statement->return_.expression != NULL) {
@@ -715,6 +743,12 @@ void free_ast_expression(ast_expression *expression) {
 
 void free_ast_statement(ast_statement *statement) {
 	switch (statement->kind) {
+	case AST_STATEMENT_LOCAL:
+		free(statement->local.name);
+		if (statement->local.initializer != NULL)
+			free_ast_expression(statement->local.initializer);
+		break;
+
 	case AST_STATEMENT_RETURN:
 		if (statement->return_.expression != NULL)
 			free_ast_expression(statement->return_.expression);

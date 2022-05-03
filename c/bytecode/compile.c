@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Since we discard all locals after returning, we can use the return local as scratch.
+#define SCRATCH_LOCAL CODEBLOCK_RETURN_LOCAL
 
 typedef struct {
 	char *name;
@@ -29,7 +31,7 @@ typedef struct {
 #endif
 
 typedef struct {
-	map *global_variables;
+	compiler *comp;
 	local_variable_map local_variables;
 
 	unsigned number_of_locals;
@@ -54,10 +56,8 @@ typedef struct {
 	} whiles;
 } codeblock_builder;
 
-#define SCRATCH_LOCAL 0
-
-void init_compiler(compiler *compiler) {
-	init_map(&compiler->globals);
+void init_compiler(compiler *comp) {
+	comp->globals = new_global_variables();
 }
 
 static unsigned next_local_index(codeblock_builder *builder) {
@@ -66,16 +66,7 @@ static unsigned next_local_index(codeblock_builder *builder) {
 	return local_index;
 }
 
-// returns -1 if it doesnt exist.
-static int lookup_global_variable(codeblock_builder *builder, const char *name) {
-	(void) builder;
-	(void) name;
-	return -1;
-	die("todo");
-	return -1;
-}
-
-static unsigned lookup_local_variable(codeblock_builder *builder, char *name) {
+static unsigned declare_local_variable(codeblock_builder *builder, char *name) {
 	for (unsigned i = 0; i < builder->local_variables.length; i++) {
 		if (!strcmp(builder->local_variables.entries[i].name, name)) {
 			free(name);
@@ -99,6 +90,16 @@ static unsigned lookup_local_variable(codeblock_builder *builder, char *name) {
 	};
 	builder->local_variables.length++;
 	return local_index;
+}
+
+// returns `-1` if it doesnt exist
+static int lookup_local_variable(codeblock_builder *builder, const char *name) {
+	for (unsigned i = 0; i < builder->local_variables.length; i++) {
+		if (!strcmp(builder->local_variables.entries[i].name, name))
+			return builder->local_variables.entries[i].local_index;
+	}
+
+	return -1;
 }
 
 static void set_bytecode(codeblock_builder *builder, bytecode bc) {
@@ -206,6 +207,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 			set_local(builder, argument_locals[i]);
 
 		set_local(builder, target_local);
+		break;
 	}
 
 	case AST_PRIMARY_UNARY_OPERATOR: {
@@ -239,15 +241,20 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 	}
 
 	case AST_PRIMARY_VARIABLE: {
-		int global_index = lookup_global_variable(builder, primary->variable.name);
+		int local_index = lookup_local_variable(builder, primary->variable.name);
 
-		if (global_index != -1) {
+		if (local_index == -1) {
+			int global_index = lookup_global_variable(builder->comp->globals, primary->variable.name);
+
+			if (global_index == -1)
+				die("undeclared variable '%s'.", primary->variable.name);
+
 			set_opcode(builder, OPCODE_LOAD_GLOBAL_VARIABLE);
 			set_count(builder, global_index);
 			set_local(builder, target_local);
 		} else {
-			set_opcode(builder, OPCODE_MOV);
-			set_local(builder, lookup_local_variable(builder, primary->variable.name));
+			set_opcode(builder, OPCODE_MOVE);
+			set_local(builder, local_index);
 			set_local(builder, target_local);			
 		}
 		break;
@@ -284,25 +291,26 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 	case AST_EXPRESSION_ASSIGN: {
 		compile_expression(builder, expression->assign.value, target_local);
 
-		int global_index = lookup_global_variable(builder, expression->assign.name);
-		if (global_index != -1)
+		int local_index = lookup_local_variable(builder, expression->assign.name);
+		if (local_index == -1)
 			goto assign_global;
-
-		unsigned local_variable = lookup_local_variable(builder, expression->assign.name);
 
 		if (expression->assign.operator != BINARY_OP_UNDEF) {
 			set_opcode(builder, binary_operator_to_opcode(expression->assign.operator));
-			set_local(builder, local_variable);
+			set_local(builder, local_index);
 			set_local(builder, target_local);
 			set_local(builder, target_local);
 		}
 
-		set_opcode(builder, OPCODE_MOV);
+		set_opcode(builder, OPCODE_MOVE);
 		set_local(builder, target_local);
-		set_local(builder, local_variable);
+		set_local(builder, local_index);
 		break;
 
-	assign_global:
+	assign_global:;
+		int global_index = lookup_global_variable(builder->comp->globals, expression->assign.name);
+		if (global_index == -1)
+			die("unknown variable '%s'; declare it first.", expression->assign.name);
 
 		if (expression->assign.operator != BINARY_OP_UNDEF) {
 			unsigned old_local_index = next_local_index(builder);
@@ -318,6 +326,7 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 
 		set_opcode(builder, OPCODE_STORE_GLOBAL_VARIABLE);
 		set_local(builder, global_index);
+		set_local(builder, target_local);
 		set_local(builder, target_local);
 		break;
 	}
@@ -388,14 +397,22 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 static void compile_block(codeblock_builder *builder, ast_block *block);
 static void compile_statement(codeblock_builder *builder, ast_statement *statement) {
 	switch (statement->kind) {
+	case AST_STATEMENT_LOCAL: {
+		unsigned new_local = declare_local_variable(builder, statement->local.name);
+		if (statement->local.initializer != NULL) 
+			compile_expression(builder, statement->local.initializer, new_local);
+		break;
+	}
+
 	case AST_STATEMENT_RETURN:
 		if (statement->return_.expression == NULL) {
-			load_constant(builder, VNULL, SCRATCH_LOCAL);
+			load_constant(builder, VNULL, CODEBLOCK_RETURN_LOCAL);
 		} else {
-			compile_expression(builder, statement->return_.expression, SCRATCH_LOCAL);
+			compile_expression(builder, statement->return_.expression, CODEBLOCK_RETURN_LOCAL);
 		}
+
 		set_opcode(builder, OPCODE_RETURN);
-		set_local(builder, SCRATCH_LOCAL);
+		// `return` takes no arguments, as it returns the `SCRATCH_LOCAL` argument
 		break;
 
 	case AST_STATEMENT_IF:
@@ -489,7 +506,7 @@ static value build_function(
 ) {
 	codeblock_builder builder;
 
-	builder.global_variables = &comp->globals;
+	builder.comp = comp;
 	builder.local_variables.length = 0;
 	builder.local_variables.capacity = 4;
 	builder.local_variables.entries =
@@ -508,9 +525,13 @@ static value build_function(
 	builder.bytecode.code = xmalloc(builder.bytecode.capacity * sizeof(bytecode));
 
 	builder.whiles.length = 0;
-	builder.number_of_locals = 1; // As we have an initial `SCRATCH_LOCAL`.
+	builder.number_of_locals = 1; // As we have an initial `CODEBLOCK_RETURN_LOCAL`.
 
 	compile_block(&builder, body);
+	// all functions implicitly return `null` at the end.
+	load_constant(&builder, VNULL, CODEBLOCK_RETURN_LOCAL);
+	set_opcode(&builder, OPCODE_LOAD_CONSTANT);
+	set_local(&builder, CODEBLOCK_RETURN_LOCAL);
 
 	codeblock *block = xmalloc(sizeof(codeblock));
 	block->code_length = builder.bytecode.length,
@@ -529,6 +550,9 @@ static value build_function(
 void compile_declaration(compiler *comp, ast_declaration *declaration) {
 	switch (declaration->kind) {
 	case AST_DECLARATION_FUNCTION: {
+		// declare it beforehand so recursive functions can reference the defn.
+		unsigned global = declare_global_variable(comp->globals, declaration->function.name);
+
 		value function = build_function(
 			comp,
 			declaration->function.name,
@@ -537,24 +561,16 @@ void compile_declaration(compiler *comp, ast_declaration *declaration) {
 			declaration->function.body
 		);
 
-		value *predeclared_function = lookup_in_map(&comp->globals, declaration->function.name);
+		if (fetch_global_variable(comp->globals, global) != VNULL)
+			die("function %s redefined", declaration->function.name);
 
-		if (predeclared_function != NULL) {
-			if(*predeclared_function != VNULL)
-				die("function %s redefined", declaration->function.name);
-
-			*predeclared_function = function;
-		} else {
-			add_to_map(&comp->globals, strdup(declaration->function.name), function);
-		}
+		assign_global_variable(comp->globals, global, function);
+		break;
 	}
 
-
 	case AST_DECLARATION_GLOBAL:
-		// We're simply declaring a global, we don't want to overwrite a previous value.
-		if (lookup_in_map(&comp->globals, declaration->global.name) == NULL)
-			add_to_map(&comp->globals, declaration->global.name, VNULL);
-		break; 
+		declare_global_variable(comp->globals, declaration->global.name);
+		break;
 	}
 
 	free(declaration);

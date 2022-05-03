@@ -1,7 +1,7 @@
 #pragma once
 
 typedef enum {
-	OPCODE_MOV,
+	OPCODE_MOVE,
 	OPCODE_ARRAY_LITERAL,
 
 	OPCODE_LOAD_CONSTANT,
