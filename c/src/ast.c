@@ -1,6 +1,6 @@
-#include "base/ast.h"
-#include "base/token.h"
-#include "base/value.h"
+#include "ast.h"
+#include "token.h"
+#include "value.h"
 #include <stdlib.h>
 #include <assert.h>
 
@@ -193,7 +193,7 @@ static binary_operator binary_operator_from_token_kind(token_kind kind) {
 	case TOKEN_KIND_LESS_THAN_OR_EQUAL:    return BINARY_OP_LESS_THAN_OR_EQUAL;
 	case TOKEN_KIND_GREATER_THAN:          return BINARY_OP_GREATER_THAN;
 	case TOKEN_KIND_GREATER_THAN_OR_EQUAL: return BINARY_OP_GREATER_THAN_OR_EQUAL;
-	default: die("[bug] invalid operator kind %d", kind);
+	default: bug("invalid operator kind %d", kind);
 	}
 }
 

@@ -2,8 +2,8 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include "base/shared.h"
-#include "base/valuedefn.h"
+#include "shared.h"
+#include "valuedefn.h"
 
 typedef struct {
 	VALUE_ALIGNMENT value *elements;

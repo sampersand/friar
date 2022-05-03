@@ -1,4 +1,4 @@
-#include "base/shared.h"
+#include "shared.h"
 
 void *xmalloc(size_t size) {
 	void *ptr = malloc(size);

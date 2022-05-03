@@ -1,6 +1,6 @@
 #pragma once
 #include <stdio.h>
-#include "base/valuedefn.h"
+#include "valuedefn.h"
 
 typedef enum {
 	// Indicates that the token isn't actually a token.

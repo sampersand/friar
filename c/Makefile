@@ -8,18 +8,11 @@ all: main
 
 .PHONY: clean
 clean:
-	-@rm base/*.o main
+	-@rm src/*.o main
 
-.PHONY: base
-base: base/array.o base/ast.o base/environment.o base/function.o base/main.o base/number.o \
-		base/shared.o base/string.o base/token.o base/value.o
-
-.PHONY: bytecode
-bytecode: bytecode/codeblock.c
-
-main: base/array.o base/ast.o base/environment.o base/function.o base/main.o base/number.o \
-		base/shared.o base/string.o base/token.o base/value.o bytecode/codeblock.o bytecode/compile.o \
-		bytecode/bytecode.o bytecode/globals.o base/builtin_function.o
+main: src/array.o src/ast.o src/environment.o src/function.o src/main.o src/number.o \
+		src/shared.o src/string.o src/token.o src/value.o src/codeblock.o src/compile.o \
+		src/bytecode.o src/globals.o src/builtin_function.o
 	$(CC) $(CFLAGS) -o $@ $+
 
 *.o: *.c

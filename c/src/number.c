@@ -1,4 +1,4 @@
-#include "base/number.h"
+#include "number.h"
 
 string *number_to_string(number num) {
 	// Assuming 64 bit `long long`s, the largest string possible is

@@ -1,7 +1,7 @@
-#include "bytecode/codeblock.h"
-#include "bytecode/globals.h"
-#include "base/shared.h"
-#include "base/value.h"
+#include "codeblock.h"
+#include "globals.h"
+#include "shared.h"
+#include "value.h"
 
 typedef struct {
 	const codeblock *block;

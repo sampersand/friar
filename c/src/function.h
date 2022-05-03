@@ -1,9 +1,9 @@
 #pragma once
 
 #include <assert.h>
-#include "base/ast.h"
-#include "base/environment.h"
-#include "base/valuedefn.h"
+#include "ast.h"
+#include "environment.h"
+#include "valuedefn.h"
 #include <stdalign.h>
 
 #ifdef AST_WALKER

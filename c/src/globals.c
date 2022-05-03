@@ -1,7 +1,7 @@
 #include "globals.h"
-#include "base/shared.h"
-#include "base/value.h"
-#include "base/builtin_function.h"
+#include "shared.h"
+#include "value.h"
+#include "builtin_function.h"
 
 global_variables *new_global_variables(void) {
 	global_variables *globals = xmalloc(sizeof(global_variables));

@@ -1,5 +1,5 @@
-#include "base/string.h"
-#include "base/shared.h"
+#include "string.h"
+#include "shared.h"
 #include <assert.h>
 
 string *new_string2(char *ptr, unsigned length) {
@@ -23,7 +23,7 @@ void deallocate_string(string *str) {
 
 string *index_string(const string *str, int idx) {
 	if (idx < 0)
-		die("negative indexing of strings isn't currently supported");
+		TODO("negative indexing of strings isn't currently supported");
 
 	if (str->length <= (unsigned) idx)
 		return NULL;

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
-#include "base/value.h"
-#include "base/ast.h"
+#include "value.h"
+#include "ast.h"
 
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {
@@ -196,7 +196,7 @@ string *value_to_string(value val) {
 		return new_string2(strdup("null"), 4);
 
 	default:
-		die("cannot no conversion to string defined for %s", value_name(val));
+		die("no conversion to string defined for %s", value_name(val));
 	}
 }
 

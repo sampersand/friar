@@ -1,8 +1,8 @@
 #pragma once
 
-#include "bytecode/bytecode.h"
-#include "base/valuedefn.h"
-#include "base/environment.h"
+#include "bytecode.h"
+#include "valuedefn.h"
+#include "environment.h"
 
 #define CODEBLOCK_RETURN_LOCAL 0
 typedef struct codeblock {

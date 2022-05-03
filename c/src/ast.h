@@ -1,8 +1,8 @@
 #pragma once
 
-#include "base/valuedefn.h"
-#include "base/token.h"
-#include "base/environment.h"
+#include "valuedefn.h"
+#include "token.h"
+#include "environment.h"
 
 typedef struct ast_expression ast_expression;
 typedef struct ast_primary ast_primary;

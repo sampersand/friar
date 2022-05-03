@@ -1,6 +1,6 @@
-#include "base/token.h"
-#include "base/shared.h"
-#include "base/value.h"
+#include "token.h"
+#include "shared.h"
+#include "value.h"
 
 #include <ctype.h>
 #include <string.h>

@@ -1,7 +1,8 @@
-#include "base/array.h"
-#include "base/shared.h"
-#include "base/value.h"
 #include <assert.h>
+
+#include "array.h"
+#include "shared.h"
+#include "value.h"
 
 array *new_array3(value *elements, unsigned length, unsigned capacity) {
 	array *ary = xmalloc(sizeof(array));
@@ -30,19 +31,20 @@ void push_array(array *ary, value val) {
 		ary->elements = xrealloc(ary->elements, ary->capacity * sizeof(value));
 	}
 
-	ary->elements[ary->length++] = val;
+	ary->elements[ary->length] = val;
+	ary->length++;
 }
 
 value index_array(const array *ary, int idx) {
 	if (idx < 0)
-		die("negative indexing isnt supported rn");
+		TODO("negative indexing isnt supported rn");
 
 	return (unsigned) idx < ary->length ? ary->elements[idx] : VUNDEF;
 }
 
 void index_assign_array(array *ary, int idx, value val) {
 	if (idx < 0)
-		die("negative indexing isnt supported rn");
+		TODO("negative indexing isnt supported rn");
 
 	// Assigning out of bounds just fills it with `null`.
 	while (ary->length <= (unsigned) idx)
@@ -108,17 +110,39 @@ array *replicate_array(array *ary, unsigned amnt) {
 
 value delete_at_array(array *ary, int idx) {
 	if (idx < 0)
-		die("negative indexing isnt supported rn");
+		TODO("negative indexing isnt supported rn");
 
-	if (ary->length <= idx)
+	if (ary->length <= (unsigned) idx)
 		return VNULL;
 
-	free_value(ary->elements[idx]);
-	memcpy(ary->elements + idx, ary->elements)
+	value deleted = ary->elements[idx];
+	memmove(
+		ary->elements + idx,
+		ary->elements + idx + 1,
+		(ary->length - idx - 1) * sizeof(value)
+	);
+	ary->length--;
+
+	return deleted;
 }
 
 void insert_at_array(array *ary, int idx, value val) {
 	if (idx < 0)
-		die("negative indexing isnt supported rn");
+		TODO("negative indexing isnt supported rn");
 
+	if (ary->length <= (unsigned) idx) {
+		index_assign_array(ary, idx, val);
+		return;
+	}
+
+	if (ary->capacity == ary->length) {
+		ary->capacity = ary->capacity * 2 + 1;
+		ary->elements = xrealloc(ary->elements, ary->capacity * sizeof(value));
+	}
+
+	for (unsigned i = ary->length; i > (unsigned) idx; i--)
+		ary->elements[i] = ary->elements[i - 1];
+
+	ary->elements[idx] = val;
+	ary->length++;
 }

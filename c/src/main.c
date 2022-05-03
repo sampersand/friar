@@ -1,7 +1,7 @@
-#include "base/token.h"
-#include "base/value.h"
-#include "bytecode/compile.h"
-#include "bytecode/codeblock.h"
+#include "token.h"
+#include "value.h"
+#include "compile.h"
+#include "codeblock.h"
 
 void run_declaration(ast_declaration*, environment*);
 // value run_codeblock(const codeblock *block, environment *env);

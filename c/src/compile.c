@@ -1,9 +1,9 @@
 #include "compile.h"
 #include "bytecode.h"
 #include "codeblock.h"
-#include "base/shared.h"
-#include "base/function.h"
-#include "base/value.h"
+#include "shared.h"
+#include "function.h"
+#include "value.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -275,7 +275,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 
 static opcode binary_operator_to_opcode(binary_operator operator) {
 	switch (operator) {
-	case BINARY_OP_UNDEF: die("[bug] BINARY_OP_UNDEF outside of an assignment");
+	case BINARY_OP_UNDEF: bug("BINARY_OP_UNDEF outside of an assignment");
 	case BINARY_OP_ADD:                   return OPCODE_ADD;
 	case BINARY_OP_SUBTRACT:              return OPCODE_SUBTRACT;
 	case BINARY_OP_MULTIPLY:              return OPCODE_MULTIPLY;

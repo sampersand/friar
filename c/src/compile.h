@@ -1,8 +1,8 @@
 #pragma once
 
-#include "base/ast.h"
-#include "base/environment.h"
-#include "bytecode/globals.h"
+#include "ast.h"
+#include "environment.h"
+#include "globals.h"
 
 typedef struct {
 	global_variables *globals;

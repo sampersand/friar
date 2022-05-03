@@ -1,7 +1,7 @@
 #pragma once
 
-#include "base/environment.h"
-#include "base/valuedefn.h"
+#include "environment.h"
+#include "valuedefn.h"
 
 typedef struct {
 	VALUE_ALIGNMENT char *name;
@@ -12,7 +12,8 @@ typedef struct {
 value call_builtin_function(
 	builtin_function *builtin_func,
 	unsigned number_of_arguments,
-	const value *arguments
+	const value *arguments,
+	environment *env
 );
 
 #define NUMBER_OF_BUILTIN_FUNCTIONS 11
