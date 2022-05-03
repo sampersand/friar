@@ -88,6 +88,11 @@ static unsigned declare_local_variable(codeblock_builder *builder, char *name) {
 		.name = name,
 		.local_index = local_index
 	};
+
+#ifdef ENABLE_LOGGING
+	printf("locals[%d] = %s\n", local_index, name);
+#endif
+
 	builder->local_variables.length++;
 	return local_index;
 }
@@ -137,7 +142,7 @@ static unsigned defer_jump(codeblock_builder *builder) {
 
 static void set_jump_dst(codeblock_builder *builder, unsigned jmp_src) {
 	assert(builder->bytecode.code[jmp_src].count == 0xAABBCCDD);
-	LOG("code[% 3d] = count(%d) (update)", builder->bytecode.length, jmp_src);
+	LOG("code[% 3d] = count(%d) (update)", jmp_src, builder->bytecode.length);
 	builder->bytecode.code[jmp_src].count = builder->bytecode.length;
 }
 
@@ -368,6 +373,7 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		case SHORT_CIRCUIT_AND_AND: set_opcode(builder, OPCODE_JUMP_IF_FALSE); break;
 		}
 
+		set_local(builder, target_local);
 		unsigned jump_to_short_circuit_end = defer_jump(builder);
 		compile_expression(builder, expression->short_circuit_operator.rhs, target_local);
 		set_jump_dst(builder, jump_to_short_circuit_end);
@@ -399,8 +405,13 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 	switch (statement->kind) {
 	case AST_STATEMENT_LOCAL: {
 		unsigned new_local = declare_local_variable(builder, statement->local.name);
-		if (statement->local.initializer != NULL) 
+
+		if (statement->local.initializer != NULL) {
 			compile_expression(builder, statement->local.initializer, new_local);
+		} else {
+			load_constant(builder, VNULL, new_local);
+		}
+
 		break;
 	}
 
@@ -512,9 +523,11 @@ static value build_function(
 	builder.local_variables.entries =
 		xmalloc(builder.local_variables.capacity * sizeof(local_variable_entry));
 
+	builder.number_of_locals = 1; // As we have an initial `CODEBLOCK_RETURN_LOCAL`.
+
 	// Arguments are simply the first few local variables
 	for (unsigned i = 0; i < number_of_arguments; i++)
-		(void) lookup_local_variable(&builder, strdup(argument_names[i]));
+		(void) declare_local_variable(&builder, strdup(argument_names[i]));
 
 	builder.constants.length = 0;
 	builder.constants.capacity = 4;
@@ -525,13 +538,11 @@ static value build_function(
 	builder.bytecode.code = xmalloc(builder.bytecode.capacity * sizeof(bytecode));
 
 	builder.whiles.length = 0;
-	builder.number_of_locals = 1; // As we have an initial `CODEBLOCK_RETURN_LOCAL`.
 
 	compile_block(&builder, body);
 	// all functions implicitly return `null` at the end.
 	load_constant(&builder, VNULL, CODEBLOCK_RETURN_LOCAL);
-	set_opcode(&builder, OPCODE_LOAD_CONSTANT);
-	set_local(&builder, CODEBLOCK_RETURN_LOCAL);
+	set_opcode(&builder, OPCODE_RETURN);
 
 	codeblock *block = xmalloc(sizeof(codeblock));
 	block->code_length = builder.bytecode.length,

@@ -5,6 +5,10 @@
 
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {
+	case VALUE_KIND_BUILTIN_FUNCTION:
+		fprintf(out, "BuiltinFunction(%s)\n", as_builtin_function(val)->name);
+		break;
+
 	case VALUE_KIND_FUNCTION: {
 		function *func = as_function(val);
 		fprintf(out, "Function(%s, args=[", func->name);
@@ -91,20 +95,27 @@ value clone_value(value val) {
 
 const char *value_kind_name(value_kind kind) {
 	switch (kind) {
-	case VALUE_KIND_BOOLEAN:  return "boolean";
-	case VALUE_KIND_NULL:     return "null";
-	case VALUE_KIND_STRING:   return "string";
-	case VALUE_KIND_FUNCTION: return "function";
-	case VALUE_KIND_ARRAY:    return "array";
-	case VALUE_KIND_NUMBER:   return "number";
+	case VALUE_KIND_BOOLEAN:          return "boolean";
+	case VALUE_KIND_NULL:             return "null";
+	case VALUE_KIND_STRING:           return "string";
+	case VALUE_KIND_ARRAY:            return "array";
+	case VALUE_KIND_NUMBER:           return "number";
+	case VALUE_KIND_FUNCTION:         return "function";
+	case VALUE_KIND_BUILTIN_FUNCTION: return "function"; // should be indistinguishable
 	}
 }
 
 value call_value(value val, unsigned argc, value *argv, environment *env) {
-	if (!is_function(val))
-		die("cannot call a value of kind %s", value_name(val));
+	switch (classify(val)) {
+	case VALUE_KIND_FUNCTION:
+		return call_function(as_function(val), argc, argv, env);
 
-	return call_function(as_function(val), argc, argv, env);
+	case VALUE_KIND_BUILTIN_FUNCTION:
+		return call_builtin_function(as_builtin_function(val), argc, argv, env);
+
+	default:
+		die("cannot call a value of kind %s", value_name(val));
+	}
 }
 
 void index_assign_value(value ary, value idx, value val) {
@@ -309,6 +320,7 @@ bool equate_values(value lhs, value rhs) {
 	case VALUE_KIND_NULL:
 	case VALUE_KIND_NUMBER:
 	case VALUE_KIND_FUNCTION:
+	case VALUE_KIND_BUILTIN_FUNCTION:
 		return lhs == rhs;
 
 	case VALUE_KIND_STRING:

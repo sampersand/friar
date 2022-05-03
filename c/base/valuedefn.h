@@ -10,12 +10,16 @@
 00...001 = VNULL
 00...010 = VTRUE
 00...011 = VUNDEF
-XX...100 = number
 XX...000 = string
 XX...001 = function
 XX...010 = ary
+XX...011 = builtin function
+XX...100 = number
 */
 typedef unsigned long long value;
+
+// since we do bit packing, we need this minimum alignment.
+#define VALUE_ALIGNMENT _Alignas(8)
 
 #define VFALSE 0
 #define VNULL 1

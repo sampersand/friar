@@ -3,10 +3,11 @@
 #include <string.h>
 #include <assert.h>
 #include "base/shared.h"
+#include "base/valuedefn.h"
 
 typedef struct {
+	VALUE_ALIGNMENT char *ptr;
 	unsigned refcount, length;
-	char *ptr;
 } string;
 
 string *new_string2(char *ptr, unsigned length);

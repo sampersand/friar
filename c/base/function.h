@@ -3,19 +3,21 @@
 #include <assert.h>
 #include "base/ast.h"
 #include "base/environment.h"
+#include "base/valuedefn.h"
+#include <stdalign.h>
 
 #ifdef AST_WALKER
 typedef ast_block function_body;
 #else
 typedef struct codeblock function_body;
-value run_codeblock(const function_body *block, environment *env);
+value run_codeblock(const struct codeblock *block, unsigned argc, const value *argv, environment *env);
 void free_codeblock(function_body *block);
 #endif
 
 typedef struct {
+	VALUE_ALIGNMENT function_body *body;
 	char *name, **argv;
 	unsigned argc, refcount;
-	function_body *body;
 } function;
 
 function *new_function(char *name, unsigned argc, char **argv, function_body *body);

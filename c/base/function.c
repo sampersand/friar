@@ -39,14 +39,15 @@ value call_function(const function *func, unsigned argc, value *argv, environmen
 
 	enter_stackframe(env);
 
+	value ret;
+
+#ifdef AST_WALKER
 	for (unsigned i = 0; i < argc; i++)
 		assign_var(env, func->argv[i], argv[i]);
 
-	value ret;
-#ifdef AST_WALKER
 	run_block(func->body, &ret, env);
 #else
-	ret = run_codeblock(func->body, env);
+	ret = run_codeblock(func->body, argc, argv, env);
 #endif
 
 	leave_stackframe(env);

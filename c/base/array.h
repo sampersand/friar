@@ -6,8 +6,8 @@
 #include "base/valuedefn.h"
 
 typedef struct {
+	VALUE_ALIGNMENT value *elements;
 	unsigned refcount, length, capacity;
-	value *elements;
 } array;
 
 array *new_array3(value *elements, unsigned length, unsigned capacity);

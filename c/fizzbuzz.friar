@@ -1,0 +1,39 @@
+function fizzbuzz1(max) {
+	local i = 0;
+
+	while i < (max - 1) {
+		i += 1;
+
+		if (i % 15) == 0 { println("FizzBuzz"); continue; }
+		if (i % 3) == 0 { println("Fizz"); continue; }
+		if (i % 5) == 0 { println("Buzz"); continue; }
+
+		println(i);
+	}
+}
+
+function fizzbuzz2(max) {
+	local ary = [0];
+
+	while length(ary) < max {
+		local i = length(ary);
+		ary[i] = "";
+
+		if (i % 3) == 0 { ary[i] += "Fizz"; }
+		if (i % 5) == 0 { ary[i] += "Buzz"; }
+		print("A" + " ");
+		print(">" + ("" + (i % 3)) + "-" + ("" + (i % 5)) + "-");
+		println((i % 3) * (i % 5));
+		if ((i % 3) * (i % 5)) != 0 { ary[i] += i; }
+	}
+
+	local i = 0;
+	while (i += 1) < max {
+		println(ary[i]);
+	}
+}
+
+function main() {
+	//fizzbuzz1(16);
+	fizzbuzz2(16);
+}

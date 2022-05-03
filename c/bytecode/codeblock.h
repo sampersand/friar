@@ -11,5 +11,5 @@ typedef struct codeblock {
 	value *constants;
 } codeblock;
 
-value run_codeblock(const codeblock *block, environment *env);
+value run_codeblock(const codeblock *block, unsigned argc, const value *argv, environment *env);
 void free_codeblock(codeblock *block);

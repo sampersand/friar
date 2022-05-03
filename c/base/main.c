@@ -16,7 +16,9 @@ int main(int argc, char **argv) {
 	init_environment(&env);
 	ast_declaration *d;
 	while ((d = next_declaration(&tzr))) {
+#ifdef ENABLE_LOGGING
 		dump_ast_declaration(stdout, d);
+#endif
 		compile_declaration(&comp, d);
 	}
 

@@ -7,7 +7,7 @@
 void *xmalloc(size_t size);
 void *xrealloc(void *ptr, size_t size);
 
-#ifndef NDEBUG
+#ifdef ENABLE_LOGGING
 # define LOG(...) (LOGN(__VA_ARGS__), puts(""))
 # define LOGN(...) (printf("%s:%d ", __FILE__, __LINE__), printf(__VA_ARGS__))
 #else

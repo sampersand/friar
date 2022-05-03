@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "base/shared.h"
 #include "base/value.h"
+#include "base/builtin_function.h"
 
 global_variables *new_global_variables(void) {
 	global_variables *globals = xmalloc(sizeof(global_variables));
@@ -8,6 +9,14 @@ global_variables *new_global_variables(void) {
 	globals->length = 0;
 	globals->capacity = 8;
 	globals->entries = xmalloc(globals->capacity * sizeof(global_variable_entry));
+
+	for (unsigned i = 0; i < NUMBER_OF_BUILTIN_FUNCTIONS; i++) {
+		assign_global_variable(
+			globals,
+			declare_global_variable(globals, builtin_functions[i].name),
+			new_builtin_function_value(&builtin_functions[i])
+		);
+	}
 
 	return globals;
 }

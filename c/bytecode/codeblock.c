@@ -36,9 +36,13 @@ static value next_local(virtual_machine *vm) {
 	unsigned count = vm->block->code[vm->instruction_pointer].count;
 	value local = vm->locals[count];
 
+#ifdef ENABLE_LOGGING
 	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
-#ifndef NDEBUG
-	dump_value(stdout, local);
+	if (local == VUNDEF) {
+		printf("VUNDEF");
+	} else  {
+		dump_value(stdout, local);
+	}
 	puts("}");
 #endif
 
@@ -67,7 +71,7 @@ static void run_array_literal(virtual_machine *vm) {
 static void run_load_constant(virtual_machine *vm) {
 	value constant = vm->block->constants[next_count(vm)];
 
-#ifndef NDEBUG
+#ifdef ENABLE_LOGGING
 	LOGN("constant=");
 	dump_value(stdout, constant);
 	puts("");
@@ -266,7 +270,7 @@ static void run_vm(virtual_machine *vm) {
 	}
 }
 
-value run_codeblock(const codeblock *block, environment *env) {
+value run_codeblock(const codeblock *block, unsigned argc, const value *argv, environment *env) {
 	virtual_machine vm;
 
 	vm.block = block;
@@ -275,8 +279,12 @@ value run_codeblock(const codeblock *block, environment *env) {
 
 	value locals[block->number_of_locals];
 	vm.locals = locals;
+
 	for (unsigned i = 0; i < block->number_of_locals; i++)
 		vm.locals[i] = VUNDEF;
+
+	for (unsigned i = 0; i < argc; i++)
+		vm.locals[i + 1] = argv[i];
 
 	run_vm(&vm);
 
