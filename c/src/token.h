@@ -50,11 +50,11 @@ typedef struct {
 } token;
 
 typedef struct {
-	const char *stream;
+	const char *stream, *filename;
 	int lineno;
 	token prev;
 } tokenizer;
 
-tokenizer new_tokenizer(const char *stream);
+tokenizer new_tokenizer(const char *stream, const char *filename);
 token next_token(tokenizer *tzr);
 void dump_token(FILE *out, token tkn);

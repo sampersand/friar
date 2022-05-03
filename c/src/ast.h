@@ -168,6 +168,11 @@ struct ast_declaration {
 		AST_DECLARATION_FUNCTION
 	} kind;
 
+	struct {
+		char *filename;
+		unsigned lineno;
+	} source;
+
 	union {
 		struct {
 			char *name;

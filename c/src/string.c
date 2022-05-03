@@ -7,7 +7,7 @@ string *new_string2(char *ptr, unsigned length) {
 
 	string *str = xmalloc(sizeof(string));
 	
-	str->refcount = 0;
+	str->refcount = 1;
 	str->length = length;
 	str->ptr = ptr;
 

@@ -150,7 +150,7 @@ static void load_constant(codeblock_builder *builder, value val, unsigned target
 	unsigned constant_index;
 
 	for (unsigned i = 0; i < builder->constants.length; i++) {
-		if (equate_values(builder->constants.consts[i], val)) {
+		if (equate_values(builder->constants.consts[i], val, NULL)) {
 			constant_index = i;
 			free_value(val);
 			goto found_constant;
@@ -513,7 +513,9 @@ static value build_function(
 	char *function_name,
 	unsigned number_of_arguments,
 	char **argument_names,
-	ast_block *body
+	ast_block *body,
+	char *source_filename,
+	unsigned source_lineno
 ) {
 	codeblock_builder builder;
 
@@ -555,7 +557,14 @@ static value build_function(
 		free(builder.local_variables.entries[i].name);
 	free(builder.local_variables.entries);
 
-	return new_function_value(new_function(function_name, number_of_arguments, argument_names, block));
+	return new_function_value(new_function(
+		function_name,
+		number_of_arguments,
+		argument_names,
+		block,
+		source_filename,
+		source_lineno
+	));
 }
 
 void compile_declaration(compiler *comp, ast_declaration *declaration) {
@@ -569,7 +578,9 @@ void compile_declaration(compiler *comp, ast_declaration *declaration) {
 			declaration->function.name,
 			declaration->function.number_of_arguments,
 			declaration->function.argument_names,
-			declaration->function.body
+			declaration->function.body,
+			declaration->source.filename,
+			declaration->source.lineno
 		);
 
 		if (fetch_global_variable(comp->globals, global) != VNULL)

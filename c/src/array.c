@@ -7,7 +7,7 @@
 array *new_array(value *elements, unsigned length, unsigned capacity) {
 	array *ary = xmalloc(sizeof(array));
 
-	ary->refcount = 0;
+	ary->refcount = 1;
 	ary->length = length;
 	ary->capacity = capacity;
 	ary->elements = elements;
@@ -84,11 +84,11 @@ array *add_arrays(array *lhs, array *rhs) {
 	return ret;
 }
 
-int compare_arrays(const array *lhs, const array *rhs) {
+int compare_arrays(const array *lhs, const array *rhs, const environment *env) {
 	unsigned min = lhs->length < rhs->length ? lhs->length : rhs->length;
 
 	for (unsigned i = 0; i < min; i++) {
-		int cmp = compare_values(lhs->elements[i], rhs->elements[i]);
+		int cmp = compare_values(lhs->elements[i], rhs->elements[i], env);
 
 		if (cmp != 0)
 			return cmp;
@@ -97,7 +97,7 @@ int compare_arrays(const array *lhs, const array *rhs) {
 	return compare_numbers(lhs->length, rhs->length);
 }
 
-bool equate_arrays(const array *lhs, const array *rhs) {
+bool equate_arrays(const array *lhs, const array *rhs, const environment *env) {
 	// short circuit for identical arrays.
 	if (lhs == rhs)
 		return true;
@@ -106,7 +106,7 @@ bool equate_arrays(const array *lhs, const array *rhs) {
 		return false;
 
 	for (unsigned i = 0; i < lhs->length; i++) {
-		if (!equate_values(lhs->elements[i], rhs->elements[i]))
+		if (!equate_values(lhs->elements[i], rhs->elements[i], env))
 			return false;
 	}
 

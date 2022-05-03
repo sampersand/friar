@@ -415,6 +415,9 @@ ast_declaration *next_declaration(tokenizer *tzr) {
 	ast_declaration *declaration = xmalloc(sizeof(ast_declaration));
 	token tkn = advance(tzr);
 
+	declaration->source.lineno = tzr->lineno;
+	declaration->source.filename = strdup(tzr->filename);
+
 	switch (tkn.kind) {
 	case TOKEN_KIND_GLOBAL:
 		declaration->kind = AST_DECLARATION_GLOBAL;

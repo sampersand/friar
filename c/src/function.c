@@ -3,16 +3,26 @@
 #include <assert.h>
 #include <string.h>
 
-function *new_function(char *name, unsigned argc, char **argv, codeblock *body) {
-	assert(name == NULL || strlen(name) != 0);
+
+function *new_function(
+	char *function_name,
+	unsigned number_of_arguments,
+	char **argument_names,
+	codeblock *body,
+	char *source_filename,
+	unsigned source_lineno
+) {
+	assert(strlen(function_name) != 0);
 
 	function *func = xmalloc(sizeof(function));
 
-	func->name = name;
-	func->argc = argc;
-	func->argv = argv;
-	func->refcount = 0;
+	func->function_name = function_name;
+	func->number_of_arguments = number_of_arguments;
+	func->argument_names = argument_names;
+	func->refcount = 1;
 	func->body = body;
+	func->source_filename = source_filename;
+	func->source_lineno = source_lineno;
 
 	return func;
 }
@@ -20,24 +30,34 @@ function *new_function(char *name, unsigned argc, char **argv, codeblock *body) 
 void deallocate_function(function *func) {
 	assert(func->refcount == 0);
 
-	for (unsigned i = 0; i < func->argc; i++)
-		free(func->argv[i]);
+	for (unsigned i = 0; i < func->number_of_arguments; i++)
+		free(func->argument_names[i]);
 
-	free(func->argv);
-	free(func->name);
+	free(func->argument_names);
+	free(func->function_name);
+	free(func->source_filename);
 	free_codeblock(func->body);
 	free(func);
 }
 
-value call_function(const function *func, unsigned argc, value *argv, environment *env) {
-	if (func->argc != argc)
-		die("argument mismatch for %s: expected %d, got %d", func->name, func->argc, argc);
+value call_function(const function *func, unsigned number_of_arguments, value *argv, environment *env) {
+	if (func->number_of_arguments != number_of_arguments) {
+		die("argument mismatch for %s: expected %d, got %d",
+			func->function_name, func->number_of_arguments, number_of_arguments);
+	}
 
-	enter_stackframe(env);
+
+	source_code_location location = {
+		.filename = func->source_filename,
+		.function_name = func->function_name,
+		.lineno = func->source_lineno
+	};
+
+	enter_stackframe(env, &location);
 
 	value ret;
 
-	ret = run_codeblock(func->body, argc, argv, env);
+	ret = run_codeblock(func->body, number_of_arguments, argv, env);
 
 	leave_stackframe(env);
 	return ret;
