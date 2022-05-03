@@ -42,6 +42,7 @@ string *add_strings(string *lhs, string *rhs) {
 	string *str = allocate_string(lhs->length + rhs->length);
 	memcpy(str->ptr, lhs->ptr, lhs->length);
 	memcpy(str->ptr + lhs->length, rhs->ptr, rhs->length + 1); // `+1` for `\0`.
+	str->length = lhs->length + rhs->length;
 
 	return str;
 }

@@ -13,7 +13,7 @@ function fizzbuzz1(max) {
 }
 
 function fizzbuzz2(max) {
-	local ary = [0];
+	local ary = [null];
 
 	while length(ary) < max {
 		local i = length(ary);
@@ -21,10 +21,7 @@ function fizzbuzz2(max) {
 
 		if (i % 3) == 0 { ary[i] += "Fizz"; }
 		if (i % 5) == 0 { ary[i] += "Buzz"; }
-		print("A" + " ");
-		print(">" + ("" + (i % 3)) + "-" + ("" + (i % 5)) + "-");
-		println((i % 3) * (i % 5));
-		if ((i % 3) * (i % 5)) != 0 { ary[i] += i; }
+		if length(ary[i]) == 0 { ary[i] = i; }
 	}
 
 	local i = 0;

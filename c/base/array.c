@@ -105,3 +105,20 @@ array *replicate_array(array *ary, unsigned amnt) {
 
 	return ret;
 }
+
+value delete_at_array(array *ary, int idx) {
+	if (idx < 0)
+		die("negative indexing isnt supported rn");
+
+	if (ary->length <= idx)
+		return VNULL;
+
+	free_value(ary->elements[idx]);
+	memcpy(ary->elements + idx, ary->elements)
+}
+
+void insert_at_array(array *ary, int idx, value val) {
+	if (idx < 0)
+		die("negative indexing isnt supported rn");
+
+}

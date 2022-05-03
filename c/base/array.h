@@ -47,3 +47,6 @@ array *add_arrays(array *lhs, array *rhs);
 int compare_arrays(const array *lhs, const array *rhs);
 bool equate_arrays(const array *lhs, const array *rhs);
 array *replicate_array(array *ary, unsigned amnt);
+
+value delete_at_array(array *ary, int idx);
+void insert_at_array(array *ary, int idx, value val);

@@ -173,7 +173,7 @@ value not_value(value val) {
 	if (!is_boolean(val))
 		die("can only not booleans, not %s", value_name(val));
 
-	return new_number_value(!as_boolean(val));
+	return new_boolean_value(!as_boolean(val));
 }
 
 string *value_to_string(value val) {
@@ -251,7 +251,7 @@ value multiply_values(value lhs, value rhs) {
 
 	switch (classify(lhs)) {
 	case VALUE_KIND_NUMBER:
-		return new_number_value(as_number(lhs) + amnt);
+		return new_number_value(as_number(lhs) * amnt);
 
 	case VALUE_KIND_STRING:
 		if (amnt < 0)

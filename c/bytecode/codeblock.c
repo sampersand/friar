@@ -51,7 +51,20 @@ static value next_local(virtual_machine *vm) {
 }
 
 static void set_next_local(virtual_machine *vm, value val) {
-	vm->locals[next_count(vm)] = val;
+	unsigned count = vm->block->code[vm->instruction_pointer].count;
+
+#ifdef ENABLE_LOGGING
+	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
+	if (val == VUNDEF) {
+		printf("VUNDEF");
+	} else  {
+		dump_value(stdout, val);
+	}
+	puts("}");
+#endif
+
+	vm->instruction_pointer++;
+	vm->locals[count] = val;
 }
 
 static void run_move(virtual_machine *vm) {

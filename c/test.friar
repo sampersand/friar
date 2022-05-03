@@ -1,0 +1,110 @@
+function assert(cond, msg) {
+	if !cond {
+		println(msg);
+		exit(1);
+	}
+}
+
+global test_global_var;
+function test_global() {
+	println("testing global variables...");
+	assert(test_global_var == null, "global isnt initially null");
+	test_global_var = 34;
+	assert(test_global_var == 34, "global isnt set properly");
+}
+
+function test_numbers() {
+	println("testing numbers...");
+
+	// normal math
+	assert(17 == 14 + 3, "+ failed");
+	assert(11 == 14 - 3, "- failed");
+	assert(42 == 14 * 3, "* failed");
+	assert( 4 == 14 / 3, "/ failed");
+	assert( 2 == 14 % 3, "% failed");
+
+	// comparison
+	assert(  14 <  15,  "< failed");
+	assert(!(14 <  14), "< failed [2]");
+	assert(  14 <= 14,  "<= failed");
+	assert(!(14 <= 13), "<= failed [2]");
+	assert(  14 >  13,  "> failed");
+	assert(!(14 >  14), "> failed [2]");
+	assert(  14 >= 14,  ">= failed");
+	assert(!(14 >= 15), ">= failed [2]");
+	assert  (14 == 14,  "== failed");
+	assert(!(14 == 15), "== failed [2]");
+	assert(  14 != 15,  "!= failed");
+	assert(!(14 != 14), "!= failed [2]");
+
+	// augmented assignment
+	local x;
+	x = 14; assert(x == 14, "local var set failed");
+	x += 2; assert(x == 16, "+= failed");
+	x -= 3; assert(x == 13, "-= failed");
+	x *= 4; assert(x == 52, "*= failed");
+	x /= 5; assert(x == 10, "/= failed");
+	x %= 3; assert(x ==  1, "%= failed");
+}
+
+function test_strings() {
+	println("testing strings...");
+
+	assert("foobar" == "foo" + "bar", "+ failed");
+	assert("foo7" == "foo" + 7, "lhs + failed");
+	assert("7foo" == 7 + "foo", "rhs + failed");
+
+	assert("f" == "foo"[0], "index failed");
+	assert(3 == length("foo"), "length failed");
+	assert("foofoofoo" == "foo" * 3, "* failed");
+}
+
+function test_constants() {
+	println("testing constants...");
+
+	assert("footrue" == "foo" + true, "true doesnt convert");
+	assert("foofalse" == "foo" + false, "false doesnt convert");
+	assert("foonull" == "foo" + null, "null doesnt convert");
+
+	assert(true == true, "true == true failed");
+	assert(false == false, "false == false failed");
+	assert(true != false, "true != false failed");
+	assert(false != true, "false != true failed");
+	assert(null == null, "null == null failed");
+	assert(null != true, "null != true failed");
+}
+
+function test_arrays() {
+	local ary = ["A", "B", "C"];
+	assert(ary == ["A", "B", "C"], "== failed");
+	assert(ary[0] == "A", "ary[0] failed");
+	assert(ary[1] == "B", "ary[1] failed");
+	assert(ary[2] == "C", "ary[2] failed");
+	assert(length(ary) == 3, "length(ary) failed");
+
+	ary[3] = "D";
+	assert(ary[3] == "D", "ary[3] failed");
+	assert(ary == ["A", "B", "C", "D"], "== failed [2]");
+	assert(length(ary) == 4, "length(ary) failed [2]");
+
+	assert(delete(ary, 1) == "B", "delete failed");
+	assert(ary == ["A", "C", "D"], "== failed [3]");
+	assert(length(ary) == 3, "length(ary) failed [3]");
+
+	if true {
+	} else {
+		assert(false, "if")
+	}
+}
+
+function main() {
+	test_global();
+	test_numbers();
+	test_strings();
+	test_constants();
+//	assert(foo == null, "foo isnt null");
+//	set_foo(4);
+//	assert(foo == 4, "foo isnt 4");
+//
+//	println("A\nhe\tl\"\\loworld" + 34);
+}
