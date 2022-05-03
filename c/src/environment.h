@@ -4,7 +4,7 @@
 #include "globals.h"
 
 #define edie(env, ...) (fprintf(stderr, __VA_ARGS__), fputs("\nstacktrace:\n", stderr), \
-	dump_stacktrace(stderr, env),exit(1))
+	dump_stacktrace(stderr),exit(1))
 
 #ifndef STACKFRAME_LIMIT
 # define STACKFRAME_LIMIT 1000
@@ -21,9 +21,8 @@ typedef struct {
 	global_variables *globals;
 } environment;
 
-void init_environment(environment *env);
-void free_environment(environment *env);
+extern environment global_environment;
 
-void enter_stackframe(environment *env, const source_code_location *location);
-void leave_stackframe(environment *env);
-void dump_stacktrace(FILE *out, const environment *env);
+void enter_stackframe(const source_code_location *location);
+void leave_stackframe(void);
+void dump_stacktrace(FILE *out);

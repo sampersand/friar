@@ -45,21 +45,24 @@ value pop_array(array *ary) {
 }
 
 value index_array(const array *ary, int idx) {
-	if (idx < 0)
+	if (idx < 0) {
 		idx += ary->length;
 
-	if (idx < 0)
-		return VUNDEF;
+		if (idx < 0)
+			return VUNDEF;
+	}
 
 	return (unsigned) idx < ary->length ? ary->elements[idx] : VUNDEF;
 }
 
 void index_assign_array(array *ary, int idx, value val) {
-	if (idx < 0)
+	if (idx < 0) {
 		idx += ary->length;
 
-	if (idx < 0)
-		die("cannot assign to negative indicies larger than `ary`'s length: %d", idx);
+		if (idx < 0)
+			die("cannot assign to negative indicies larger than `ary`'s length: %d", idx);
+	}
+
 
 	// Assigning out of bounds just fills it with `null`.
 	while (ary->length <= (unsigned) idx)
@@ -84,11 +87,11 @@ array *add_arrays(array *lhs, array *rhs) {
 	return ret;
 }
 
-int compare_arrays(const array *lhs, const array *rhs, const environment *env) {
+int compare_arrays(const array *lhs, const array *rhs) {
 	unsigned min = lhs->length < rhs->length ? lhs->length : rhs->length;
 
 	for (unsigned i = 0; i < min; i++) {
-		int cmp = compare_values(lhs->elements[i], rhs->elements[i], env);
+		int cmp = compare_values(lhs->elements[i], rhs->elements[i]);
 
 		if (cmp != 0)
 			return cmp;
@@ -97,7 +100,7 @@ int compare_arrays(const array *lhs, const array *rhs, const environment *env) {
 	return compare_numbers(lhs->length, rhs->length);
 }
 
-bool equate_arrays(const array *lhs, const array *rhs, const environment *env) {
+bool equate_arrays(const array *lhs, const array *rhs) {
 	// short circuit for identical arrays.
 	if (lhs == rhs)
 		return true;
@@ -106,7 +109,7 @@ bool equate_arrays(const array *lhs, const array *rhs, const environment *env) {
 		return false;
 
 	for (unsigned i = 0; i < lhs->length; i++) {
-		if (!equate_values(lhs->elements[i], rhs->elements[i], env))
+		if (!equate_values(lhs->elements[i], rhs->elements[i]))
 			return false;
 	}
 
@@ -131,9 +134,14 @@ array *replicate_array(array *ary, unsigned amnt) {
 }
 
 value delete_at_array(array *ary, int idx) {
-	if (idx < 0)
+	if (idx < 0)  {
 		idx += ary->length;
-	if (idx < 0 || ary->length <= (unsigned) idx)
+
+		if (idx < 0)
+			return VUNDEF;
+	}
+
+	if (ary->length <= (unsigned) idx)
 		return VUNDEF;
 
 	value deleted = ary->elements[idx];
@@ -149,11 +157,13 @@ value delete_at_array(array *ary, int idx) {
 }
 
 void insert_at_array(array *ary, int idx, value val) {
-	if (idx < 0)
+	if (idx < 0) {
 		idx += ary->length;
 
-	if (idx < 0)
-		die("cannot insert to negative indicies larger than `ary`'s length: %d", idx);
+		if (idx < 0)
+			die("cannot insert to negative indicies larger than `ary`'s length: %d", idx);
+	}
+
 
 	if (ary->length <= (unsigned) idx) {
 		index_assign_array(ary, idx, val);

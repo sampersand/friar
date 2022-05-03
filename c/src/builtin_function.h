@@ -1,6 +1,5 @@
 #pragma once
 
-#include "environment.h"
 #include "valuedefn.h"
 
 typedef struct {
@@ -12,8 +11,7 @@ typedef struct {
 value call_builtin_function(
 	builtin_function *builtin_func,
 	unsigned number_of_arguments,
-	const value *arguments,
-	environment *env
+	const value *arguments
 );
 
 #define NUMBER_OF_BUILTIN_FUNCTIONS 11

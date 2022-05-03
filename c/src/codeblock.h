@@ -2,7 +2,6 @@
 
 #include "bytecode.h"
 #include "valuedefn.h"
-#include "environment.h"
 
 #define CODEBLOCK_RETURN_LOCAL 0
 typedef struct codeblock {
@@ -11,5 +10,5 @@ typedef struct codeblock {
 	value *constants;
 } codeblock;
 
-value run_codeblock(const codeblock *block, unsigned argc, const value *argv, environment *env);
+value run_codeblock(const codeblock *block, unsigned argc, const value *argv);
 void free_codeblock(codeblock *block);

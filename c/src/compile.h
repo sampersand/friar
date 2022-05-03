@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ast.h"
-#include "environment.h"
 #include "globals.h"
 
 typedef struct {

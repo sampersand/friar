@@ -10,7 +10,6 @@
 #include "array.h"
 #include "number.h"
 #include "function.h"
-#include "environment.h"
 #include "builtin_function.h"
 #include "ast.h"
 
@@ -207,44 +206,39 @@ value clone_value(value val);
 // Converts `val` to a string.
 string *value_to_string(value val);
 
-// Calls `val` with the given arguments and `environment`.
-value call_value(
-	value val,
-	unsigned number_of_arguments,
-	value *arguments,
-	environment *env
-);
+// Calls `val` with the given arguments.
+value call_value(value val, unsigned number_of_arguments, value *arguments);
 
 // Numerically negates `val`.
-value negate_value(value val, const environment *env);
+value negate_value(value val);
 
 // Logically negates `val`.
-value not_value(value val, const environment *env);
+value not_value(value val);
 
 // Adds `lhs` to `rhs`.
-value add_values(value lhs, value rhs, const environment *env);
+value add_values(value lhs, value rhs);
 
 // Subtracts `rhs` from `lhs`.
-value subtract_values(value lhs, value rhs, const environment *env);
+value subtract_values(value lhs, value rhs);
 
 // Multiplies `lhs` with `rhs`.
-value multiply_values(value lhs, value rhs, const environment *env);
+value multiply_values(value lhs, value rhs);
 
 // Divides `lhs` by `rhs`.
-value divide_values(value lhs, value rhs, const environment *env);
+value divide_values(value lhs, value rhs);
 
 // Modulos `lhs` by `rhs`.
-value modulo_values(value lhs, value rhs, const environment *env);
+value modulo_values(value lhs, value rhs);
 
 // Returns true if `lhs` equals `rhs`.
-bool equate_values(value lhs, value rhs, const environment *env);
+bool equate_values(value lhs, value rhs);
 
 // Returns a negative, zero, or positive number depending on if `lhs` is 
 // less than, equal to, or greater than `rhs`.
-int compare_values(value lhs, value rhs, const environment *env);
+int compare_values(value lhs, value rhs);
 
 // Gets the element at `idx` within `source`.
-value index_value(value source, value idx, const environment *env);
+value index_value(value source, value idx);
 
 // Assigns the element at `idx` to `val` within `source`.
-void index_assign_value(value source, value idx, value val, const environment *env);
+void index_assign_value(value source, value idx, value val);
