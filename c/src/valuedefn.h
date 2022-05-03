@@ -5,16 +5,9 @@
 // functions like creation and casting.
 
 /*
-`value`s are actually encoded using bit-masking.
-00...000 = VFALSE
-00...001 = VNULL
-00...010 = VTRUE
-00...011 = VUNDEF
-XX...000 = string
-XX...001 = function
-XX...010 = ary
-XX...011 = builtin function
-XX...100 = number
+The value type.
+
+Note that friar has reference counting semantics.
 */
 typedef unsigned long long value;
 

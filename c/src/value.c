@@ -195,6 +195,9 @@ string *value_to_string(value val) {
 	case VALUE_KIND_NULL:
 		return new_string2(strdup("null"), 4);
 
+	case VALUE_KIND_ARRAY:
+		return array_to_string(as_array(val));
+
 	default:
 		die("no conversion to string defined for %s", value_name(val));
 	}

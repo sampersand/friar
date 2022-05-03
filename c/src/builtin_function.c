@@ -95,7 +95,8 @@ static value builtin_delete_fn(const value *arguments) {
 	if (!is_number(arguments[1]))
 		die("index needs to be an integer for `delete`, not %s", value_name(arguments[1]));
 
-	return delete_at_array(as_array(arguments[0]), as_number(arguments[1]));
+	value ret = delete_at_array(as_array(arguments[0]), as_number(arguments[1]));
+	return ret == VUNDEF ? VNULL : ret;
 }
 
 static value builtin_insert_fn(const value *arguments) {
