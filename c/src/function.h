@@ -7,16 +7,26 @@
 #include "codeblock.h"
 #include <stdalign.h>
 
-value run_codeblock(const codeblock *block, unsigned argc, const value *argv, environment *env);
-void free_codeblock(codeblock *block);
-
 typedef struct {
 	VALUE_ALIGNMENT codeblock *body;
-	char *name, **argv;
-	unsigned argc, refcount;
+	char *function_name;
+	unsigned refcount;
+
+	unsigned number_of_arguments;
+	char **argument_names;
+
+	unsigned source_lineno;
+	char *source_filename;
 } function;
 
-function *new_function(char *name, unsigned argc, char **argv, codeblock *body);
+function *new_function(
+	char *function_name,
+	unsigned number_of_arguments,
+	char **argument_names,
+	codeblock *body,
+	char *source_filename,
+	unsigned source_lineno
+);
 
 void deallocate_function(function *func);
 

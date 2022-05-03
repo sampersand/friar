@@ -7,9 +7,10 @@
 #include <stdbool.h>
 #include <assert.h>
 
-tokenizer new_tokenizer(const char *stream) {
+tokenizer new_tokenizer(const char *stream, const char *filename) {
 	return (tokenizer) {
 		.stream = stream,
+		.filename = filename,
 		.lineno = 1,
 		.prev = (token) { .kind = TOKEN_KIND_UNDEFINED }
 	};

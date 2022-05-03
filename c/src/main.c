@@ -9,7 +9,7 @@ void run_declaration(ast_declaration*, environment*);
 environment env;
 int main(int argc, char **argv) {
 	(void) argc;
-	tokenizer tzr = new_tokenizer(argv[1]);
+	tokenizer tzr = new_tokenizer(argv[2], "-e");
 
 	compiler comp;
 	init_compiler(&comp);
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 		compile_declaration(&comp, d);
 	}
 
-	env.globals1 = comp.globals;
+	env.globals = comp.globals;
 
 	// 	exit(0);
 

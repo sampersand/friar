@@ -11,13 +11,13 @@ void dump_value(FILE *out, value val) {
 
 	case VALUE_KIND_FUNCTION: {
 		function *func = as_function(val);
-		fprintf(out, "Function(%s, args=[", func->name);
+		fprintf(out, "Function(%s, args=[", func->function_name);
 
-		for (unsigned i = 0; i < func->argc; i++) {
+		for (unsigned i = 0; i < func->number_of_arguments; i++) {
 			if (i != 0)
 				fputs(", ", out);
 
-			fputs(func->argv[i], out);
+			fputs(func->argument_names[i], out);
 		}
 
 		fputs("])", out);
@@ -114,23 +114,23 @@ value call_value(value val, unsigned argc, value *argv, environment *env) {
 		return call_builtin_function(as_builtin_function(val), argc, argv, env);
 
 	default:
-		die("cannot call a value of kind %s", value_name(val));
+		edie(env, "cannot call a value of kind %s", value_name(val));
 	}
 }
 
-void index_assign_value(value ary, value idx, value val) {
+void index_assign_value(value ary, value idx, value val, const environment *env) {
 	if (!is_array(ary))
-		die("can only index assign into arrays");
+		edie(env, "can only index assign into arrays, not %s", value_name(ary));
 
 	if (!is_number(idx))
-		die("you must index with numbers");
+		edie(env, "you must index with numbers, not %s", value_name(idx));
 
 	index_assign_array(as_array(ary), as_number(idx), val);
 }
 
-value index_value(value val, value idx) {
+value index_value(value val, value idx, const environment *env) {
 	if (!is_number(idx))
-		die("you must index with numbers");
+		edie(env, "you must index with numbers, not %s", value_name(idx));
 
 	number num_idx = as_number(idx);
 
@@ -139,7 +139,7 @@ value index_value(value val, value idx) {
 		string *str = index_string(as_string(val), num_idx);
 
 		if (str == NULL) {
-			die("index %lld is out of bounds for string of length %u",
+			edie(env, "index %lld is out of bounds for string of length %u",
 				num_idx, as_string(val)->length);
 		}
 
@@ -150,7 +150,7 @@ value index_value(value val, value idx) {
 		value ret = index_array(as_array(val), num_idx);
 
 		if (ret == VUNDEF) {
-			die("index %lld is out of bounds for array of length %u",
+			edie(env, "index %lld is out of bounds for array of length %u",
 				num_idx, as_array(val)->length);
 		}
 
@@ -158,20 +158,20 @@ value index_value(value val, value idx) {
 	}
 
 	default:
-		die("can only index into arrays or strs");
+		edie(env, "can only index into arrays or strings, not %s", value_name(idx));
 	}
 }
 
-value negate_value(value val) {
+value negate_value(value val, const environment *env) {
 	if (!is_number(val))
-		die("can only negate numbers, not %s", value_name(val));
+		edie(env, "can only negate numbers, not %s", value_name(val));
 
 	return new_number_value(-as_number(val));
 }
 
-value not_value(value val) {
+value not_value(value val, const environment *env) {
 	if (!is_boolean(val))
-		die("can only not booleans, not %s", value_name(val));
+		edie(env, "can only not booleans, not %s", value_name(val));
 
 	return new_boolean_value(!as_boolean(val));
 }
@@ -203,13 +203,13 @@ string *value_to_string(value val) {
 	}
 }
 
-value add_values(value lhs, value rhs) {
+value add_values(value lhs, value rhs, const environment *env) {
 	// If either side is a string, we convert both to strings then add.
 	if (is_string(lhs) || is_string(rhs))
 		goto string;
 
 	if (classify(lhs) != classify(rhs)) {
-		die("can only add like kinds together, or strings to other types, not %s to %s",
+		edie(env, "can only add like kinds together, or strings to other types, not %s to %s",
 			value_name(lhs), value_name(rhs));
 	}
 
@@ -233,20 +233,22 @@ value add_values(value lhs, value rhs) {
 	}
 
 	default:
-		die("can only add numbers, arrays, and strings, not %s", value_name(lhs));
+		edie(env, "can only add numbers, arrays, and strings, not %s", value_name(lhs));
 	}
 }
 
-value subtract_values(value lhs, value rhs) {
-	if (!is_number(lhs) || !is_number(rhs))
-		die("can only subtract numbers from numbers");
+value subtract_values(value lhs, value rhs, const environment *env) {
+	if (!is_number(lhs) || !is_number(rhs)) {
+		edie(env, "can only subtract numbers from numbers, not %s from %s",
+			value_name(rhs), value_name(lhs)); // yes its backwards intentionally; englihs is weird
+	}
 
 	return new_number_value(as_number(lhs) - as_number(rhs));
 }
 
-value multiply_values(value lhs, value rhs) {
+value multiply_values(value lhs, value rhs, const environment *env) {
 	if (!is_number(rhs))  {
-		die("can only multiply numbers, strings, and arrays by numbers, not %ss",
+		edie(env, "can only multiply numbers, strings, and arrays by numbers, not %ss",
 			value_name(rhs));
 	}
 
@@ -258,44 +260,48 @@ value multiply_values(value lhs, value rhs) {
 
 	case VALUE_KIND_STRING:
 		if (amnt < 0)
-			die("can only multiply strings by nonnegative integers.");
+			edie(env, "can only multiply strings by nonnegative integers (%lld invalid).", amnt);
 
 		return new_string_value(replicate_string(as_string(lhs), amnt));
 
 	case VALUE_KIND_ARRAY:
 		if (amnt < 0)
-			die("can only multiply arrays by nonnegative integers.");
+			edie(env, "can only multiply arrays by nonnegative integers (%lld invalid).", amnt);
 
 		return new_array_value(replicate_array(as_array(lhs), amnt));
 
 	default:
-		die("can only multiply numbers, strings, and arrays.");
+		edie(env, "can only multiply numbers, strings, and arrays, not %s.", value_name(lhs));
 	}
 }
 
-value divide_values(value lhs, value rhs) {
-	if (!is_number(lhs) || !is_number(rhs))
-		die("can only divide numbers from numbers");
+value divide_values(value lhs, value rhs, const environment *env) {
+	if (!is_number(lhs) || !is_number(rhs)) {
+		edie(env, "can only divide numbers from numbers, not %s from %s",
+			value_name(rhs), value_name(lhs)); // yes its backwards intentionally; english is weird
+	}
 
 	if (as_number(rhs) == 0)
-		die("division by zero!");
+		edie(env, "division by zero!");
 
 	return new_number_value(as_number(lhs) / as_number(rhs));
 }
 
-value modulo_values(value lhs, value rhs) {
-	if (!is_number(lhs) || !is_number(rhs))
-		die("can only modulo numbers with numbers");
+value modulo_values(value lhs, value rhs, const environment *env) {
+	if (!is_number(lhs) || !is_number(rhs)) {
+		edie(env, "can only modulo numbers from numbers, not %s from %s",
+			value_name(rhs), value_name(lhs)); // yes its backwards intentionally; english is weird
+	}
 
 	if (as_number(rhs) == 0)
-		die("modulo by zero!");
+		edie(env, "modulo by zero!");
 
 	return new_number_value(as_number(lhs) % as_number(rhs));
 }
 
-int compare_values(value lhs, value rhs) {
+int compare_values(value lhs, value rhs, const environment *env) {
 	if (classify(lhs) != classify(rhs)) {
-		die("can only compare like kinds together, not %s to %s",
+		edie(env, "can only compare like kinds together, not %s to %s",
 			value_name(lhs), value_name(rhs));
 	}
 
@@ -304,17 +310,19 @@ int compare_values(value lhs, value rhs) {
 		return compare_numbers(as_number(lhs), as_number(rhs));
 
 	case VALUE_KIND_ARRAY:
-		return compare_arrays(as_array(lhs), as_array(rhs));
+		return compare_arrays(as_array(lhs), as_array(rhs), env);
 
 	case VALUE_KIND_STRING:
 		return compare_strings(as_string(lhs), as_string(rhs));
 
 	default:
-		die("can only compare numbers, arrays, and strings, not %s", value_name(lhs));
+		edie(env, "can only compare numbers, arrays, and strings, not %s", value_name(lhs));
 	}
 }
 
-bool equate_values(value lhs, value rhs) {
+bool equate_values(value lhs, value rhs, const environment *env) {
+	(void) env;
+
 	if (classify(lhs) != classify(rhs))
 		return false;
 
@@ -330,6 +338,6 @@ bool equate_values(value lhs, value rhs) {
 		return !strcmp(as_string(lhs)->ptr, as_string(rhs)->ptr);
 
 	case VALUE_KIND_ARRAY:
-		return equate_arrays(as_array(lhs), as_array(rhs));
+		return equate_arrays(as_array(lhs), as_array(rhs), env);
 	}
 }

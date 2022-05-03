@@ -216,35 +216,35 @@ value call_value(
 );
 
 // Numerically negates `val`.
-value negate_value(value val);
+value negate_value(value val, const environment *env);
 
 // Logically negates `val`.
-value not_value(value val);
+value not_value(value val, const environment *env);
 
 // Adds `lhs` to `rhs`.
-value add_values(value lhs, value rhs);
+value add_values(value lhs, value rhs, const environment *env);
 
 // Subtracts `rhs` from `lhs`.
-value subtract_values(value lhs, value rhs);
+value subtract_values(value lhs, value rhs, const environment *env);
 
 // Multiplies `lhs` with `rhs`.
-value multiply_values(value lhs, value rhs);
+value multiply_values(value lhs, value rhs, const environment *env);
 
 // Divides `lhs` by `rhs`.
-value divide_values(value lhs, value rhs);
+value divide_values(value lhs, value rhs, const environment *env);
 
 // Modulos `lhs` by `rhs`.
-value modulo_values(value lhs, value rhs);
+value modulo_values(value lhs, value rhs, const environment *env);
 
 // Returns true if `lhs` equals `rhs`.
-bool equate_values(value lhs, value rhs);
+bool equate_values(value lhs, value rhs, const environment *env);
 
 // Returns a negative, zero, or positive number depending on if `lhs` is 
 // less than, equal to, or greater than `rhs`.
-int compare_values(value lhs, value rhs);
+int compare_values(value lhs, value rhs, const environment *env);
 
 // Gets the element at `idx` within `source`.
-value index_value(value source, value idx);
+value index_value(value source, value idx, const environment *env);
 
 // Assigns the element at `idx` to `val` within `source`.
-void index_assign_value(value source, value idx, value val);
+void index_assign_value(value source, value idx, value val, const environment *env);
