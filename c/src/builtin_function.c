@@ -4,7 +4,7 @@
 value call_builtin_function(
 	builtin_function *builtin_func,
 	unsigned number_of_arguments,
-	const value *arguments,
+	const value *arguments
 ) {
 	if (builtin_func->required_argument_count != number_of_arguments) {
 		die("argument mismatch, %s expected %d, but got %d",

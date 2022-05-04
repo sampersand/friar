@@ -60,7 +60,7 @@ void index_assign_array(array *ary, int idx, value val) {
 		idx += ary->length;
 
 		if (idx < 0)
-			die("cannot assign to negative indicies larger than `ary`'s length: %d", idx);
+			edie("cannot assign to negative indicies larger than `ary`'s length: %d", idx);
 	}
 
 
@@ -161,7 +161,7 @@ void insert_at_array(array *ary, int idx, value val) {
 		idx += ary->length;
 
 		if (idx < 0)
-			die("cannot insert to negative indicies larger than `ary`'s length: %d", idx);
+			edie("cannot insert to negative indicies larger than `ary`'s length: %d", idx);
 	}
 
 

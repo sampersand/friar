@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
-tokenizer new_tokenizer(const char *stream, const char *filename) {
+tokenizer new_tokenizer(const char *filename, const char *stream) {
 	return (tokenizer) {
 		.stream = stream,
 		.filename = filename,

@@ -95,14 +95,14 @@ static void run_load_constant(virtual_machine *vm) {
 static void run_load_global_variable(virtual_machine *vm) {
 	unsigned global_index = next_count(vm);
 
-	set_next_local(vm, fetch_global_variable(global_environment.globals, global_index));
+	set_next_local(vm, fetch_global_variable(global_index));
 }
 
 static void run_store_global_variable(virtual_machine *vm) {
 	unsigned global_index = next_count(vm);
 	value value = next_local(vm);
 
-	assign_global_variable(global_environment.globals, global_index, value);
+	assign_global_variable(global_index, value);
 	set_next_local(vm, value);
 }
 

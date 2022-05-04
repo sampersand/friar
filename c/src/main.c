@@ -3,29 +3,26 @@
 #include "compile.h"
 #include "codeblock.h"
 #include "environment.h"
+#include "globals.h"
 
 int main(int argc, char **argv) {
-	(void) argc;
-	tokenizer tzr = new_tokenizer(argv[2], "-e");
+	if (argc != 3)
+		die("usage: %s -e <program>", argv[0]);
 
-	compiler comp;
-	init_compiler(&comp);
+	init_environment();
+	init_global_variables();
 
-	ast_declaration *d;
-	while ((d = next_declaration(&tzr))) {
-#ifdef ENABLE_LOGGING
-		dump_ast_declaration(stdout, d);
-#endif
-		compile_declaration(&comp, d);
-	}
+	compile("-e", argv[2]);
 
-	global_environment.globals = comp.globals;
-
-	int main_index = lookup_global_variable(comp.globals, "main");
+	int main_index = lookup_global_variable("main");
 	if (main_index == -1)
 		die("you must define a `main` function");
 
-	value ret = call_value(fetch_global_variable(comp.globals, main_index), 0, NULL);
+	value ret = call_value(fetch_global_variable(main_index), 0, NULL);
+
+	free_environment();
+	free_global_variables();
+	
 	if (is_number(ret))
 		return as_number(ret);
 }

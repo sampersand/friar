@@ -55,6 +55,6 @@ typedef struct {
 	token prev;
 } tokenizer;
 
-tokenizer new_tokenizer(const char *stream, const char *filename);
+tokenizer new_tokenizer(const char *filename, const char *stream);
 token next_token(tokenizer *tzr);
 void dump_token(FILE *out, token tkn);
