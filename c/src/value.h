@@ -13,6 +13,11 @@
 #include "builtin_function.h"
 #include "ast.h"
 
+#define VALUE_FALSE 0
+#define VALUE_NULL 1
+#define VALUE_TRUE 2
+#define VALUE_UNDEFINED 3
+
 /*
 As Friar is a dynamically typed langauge, all possible types are encoded within
 a single `value` type. To differentiate between types, we use encode type data
@@ -24,10 +29,10 @@ which means the bottom three bits are used for storing information.
 As such, `number` is really a 61 bit integer, as three bits are used for tagging.
 
 The scheme is laid out as follows:
-000...000 = VFALSE
-000...001 = VNULL
-000...010 = VTRUE
-000...011 = VUNDEF (indicates "undefined")
+000...000 = VALUE_FALSE
+000...001 = VALUE_NULL
+000...010 = VALUE_TRUE
+000...011 = VALUE_UNDEFINED (indicates "undefined")
 XXX...000 = string
 XXX...001 = user-defined function
 XXX...010 = ary
@@ -56,7 +61,7 @@ typedef enum {
 	VALUE_KIND_ARRAY            = VALUE_TAG_ARRAY,
 	VALUE_KIND_NUMBER           = VALUE_TAG_NUMBER,
 	VALUE_KIND_BOOLEAN          = VALUE_TAG_MASK + 1, // guaranteed to not be a tag
-	VALUE_KIND_NULL,
+	VALUE_KIND_NULL             = VALUE_TAG_MASK + 2, // also guaranteed not to eb a tag.
 } value_kind;
 
 // Returns a string representation of `kind`.
@@ -64,12 +69,12 @@ const char *value_kind_name(value_kind kind);
 
 // Returns the kind of value `val` is.
 static inline value_kind classify(value val) {
-	assert(val != VUNDEF);
+	assert(val != VALUE_UNDEFINED);
 
-	if (val == VNULL)
+	if (val == VALUE_NULL)
 		return VALUE_KIND_NULL;
 
-	if (val == VTRUE || val == VFALSE)
+	if (val == VALUE_TRUE || val == VALUE_FALSE)
 		return VALUE_KIND_BOOLEAN;
 
 	return val & VALUE_TAG_MASK;
@@ -82,7 +87,7 @@ static inline const char *value_name(value val) {
 
 // Creates a new `value` out of a `bool`.
 static inline value new_boolean_value(bool boolean) {
-	return boolean ? VTRUE : VFALSE;
+	return boolean ? VALUE_TRUE : VALUE_FALSE;
 }
 
 // Creates a new `value` out of an `array`.
@@ -114,14 +119,11 @@ static inline value new_builtin_function_value(builtin_function *builtin_func) {
 	return (value) builtin_func | VALUE_TAG_BUILTIN_FUNCTION;
 }
 
-// Checks if `val` is null.
-static inline bool is_null(value val) {
-	return val == VNULL;
-}
+// Note that there's no `is_null` as you can just do `== NULL`
 
 // Checks if `val` is a `bool`.
 static inline bool is_boolean(value val) {
-	return val == VTRUE || val == VFALSE;
+	return val == VALUE_TRUE || val == VALUE_FALSE;
 }
 
 // Checks if `val` is an `array`.
@@ -152,7 +154,7 @@ static inline bool is_builtin_function(value val) {
 // Casts `val` to a `bool` without verifying its type.
 static inline bool as_boolean(value val) {
 	assert(is_boolean(val));
-	return val == VTRUE;
+	return val == VALUE_TRUE;
 }
 
 // Casts `val` to a `number` without verifying its type.

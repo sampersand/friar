@@ -14,12 +14,12 @@ string *number_to_string(number num) {
 }
 
 number string_to_number(const string *str) {
-	// We can't use `strtoll` as strings aren't null terminated
+	// We can't use `strtoll` as strings aren't null terminated.
 
 	const char *ptr = str->ptr;
 	unsigned length_remaining = str->length;
 
-	// Remove leading whitespace
+	// Remove leading whitespace.
 	while (length_remaining != 0 && isspace(ptr[0])) {
 		ptr++;
 		length_remaining--;
@@ -28,13 +28,14 @@ number string_to_number(const string *str) {
 	if (length_remaining == 0)
 		return 0;
 
+	// Check for leading `-` or `+`s.
 	bool is_negative = ptr[0] == '-';
-
 	if (ptr[0] == '-' || ptr[0] == '+') {
 		ptr++;
 		length_remaining--;
 	}
 
+	// Build the number.
 	number num = 0;
 	while (length_remaining != 0 && isdigit(ptr[0])) {
 		num = num * 10 + (ptr[0] - '0');

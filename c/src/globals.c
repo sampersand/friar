@@ -56,7 +56,7 @@ unsigned declare_global_variable(char *name) {
 
 	unsigned index = globals.length;
 	globals.entries[index].name = name;
-	globals.entries[index].val = VNULL;
+	globals.entries[index].val = VALUE_NULL;
 	globals.length++;
 	return index;
 }
@@ -71,5 +71,5 @@ void assign_global_variable(unsigned index, value val) {
 value fetch_global_variable(unsigned index) {
 	assert(index < globals.length);
 
-	return globals.entries[index].val;
+	return clone_value(globals.entries[index].val);
 }

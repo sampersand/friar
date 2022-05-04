@@ -3,11 +3,23 @@
 #include "shared.h"
 #include "value.h"
 
-typedef struct {
-	const codeblock *block;
-	unsigned instruction_pointer;
-	value* locals;
-} virtual_machine;
+codeblock *new_codeblock(
+	unsigned number_of_locals,
+	unsigned code_length,
+	bytecode *code,
+	unsigned number_of_constants,
+	value *constants
+) {
+	codeblock *block = xmalloc(sizeof(codeblock));
+
+	block->code_length = code_length;
+	block->number_of_locals = number_of_locals;
+	block->number_of_constants = number_of_constants;
+	block->code = code;
+	block->constants = constants;
+
+	return block;
+}
 
 void free_codeblock(codeblock *block) {
 	for (unsigned i = 0; i < block->number_of_constants; i++)
@@ -17,6 +29,12 @@ void free_codeblock(codeblock *block) {
 	free(block->code);
 	free(block);
 }
+
+typedef struct {
+	const codeblock *block;
+	unsigned instruction_pointer;
+	value *locals;
+} virtual_machine;
 
 static unsigned next_count(virtual_machine *vm) {
 	unsigned count = vm->block->code[vm->instruction_pointer].count;
@@ -38,12 +56,12 @@ static value next_local(virtual_machine *vm) {
 
 #ifdef ENABLE_LOGGING
 	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
-	if (local == VUNDEF) {
-		printf("VUNDEF");
+	if (local == VALUE_UNDEFINED) {
+		printf("VALUE_UNDEFINED");
 	} else  {
 		dump_value(stdout, local);
 	}
-	puts("}");
+	putchar(')');
 #endif
 
 	vm->instruction_pointer++;
@@ -55,8 +73,8 @@ static void set_next_local(virtual_machine *vm, value val) {
 
 #ifdef ENABLE_LOGGING
 	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
-	if (val == VUNDEF) {
-		printf("VUNDEF");
+	if (val == VALUE_UNDEFINED) {
+		printf("VALUE_UNDEFINED");
 	} else  {
 		dump_value(stdout, val);
 	}
@@ -294,7 +312,7 @@ value run_codeblock(const codeblock *block, unsigned number_of_arguments, const 
 	vm.locals = locals;
 
 	for (unsigned i = 0; i < block->number_of_locals; i++)
-		vm.locals[i] = VUNDEF;
+		vm.locals[i] = VALUE_UNDEFINED;
 
 	for (unsigned i = 0; i < number_of_arguments; i++)
 		vm.locals[i + 1] = clone_value(arguments[i]);
@@ -303,7 +321,7 @@ value run_codeblock(const codeblock *block, unsigned number_of_arguments, const 
 
 	// note that this starts at `1`. This is because the return value is `locals[0]`.
 	for (unsigned i = 1; i < block->number_of_locals; i++) {
-		if (locals[i] != VUNDEF)
+		if (locals[i] != VALUE_UNDEFINED)
 			free_value(locals[i]);
 	}
 

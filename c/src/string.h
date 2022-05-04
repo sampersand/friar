@@ -22,9 +22,6 @@ static inline string *allocate_string(unsigned capacity) {
 void deallocate_string(string *str);
 
 static inline void free_string(string *str) {
-#ifndef WE_SOLVED_FREE_ISSUES
-	return;
-#endif
 	assert(str->refcount != 0);
 
 	str->refcount--;

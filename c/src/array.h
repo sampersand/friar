@@ -26,9 +26,6 @@ void deallocate_array(array *ary);
 
 // Stops using `ary`, possibly deallocating it if the refcount is zero.
 static inline void free_array(array *ary) {
-#ifndef WE_SOLVED_FREE_ISSUES
-	return;
-#endif
 	assert(ary->refcount != 0); // This means it should have been freed already.
 
 	ary->refcount--;
@@ -45,19 +42,19 @@ static inline array *clone_array(array *ary) {
 // Pushes `val` onto the end of `ary`.
 void push_array(array *ary, value val);
 
-// Removes the last element from `ary`, returning `VUNDEF` if `ary` is empty.
+// Removes the last element from `ary`, returning `VALUE_UNDEFINED` if `ary` is empty.
 value pop_array(array *ary);
 
-// Gets the element at `idx` within `ary`, returning `VUNDEF` if out of bounds.
+// Gets the element at `idx` within `ary`, returning `VALUE_UNDEFINED` if out of bounds.
 value index_array(const array *ary, int idx);
 void index_assign_array(array *ary, int idx, value val);
+value delete_at_array(array *ary, int idx);
+void insert_at_array(array *ary, int idx, value val);
+
 array *add_arrays(array *lhs, array *rhs);
 int compare_arrays(const array *lhs, const array *rhs);
 bool equate_arrays(const array *lhs, const array *rhs);
 array *replicate_array(array *ary, unsigned amnt);
 
-value delete_at_array(array *ary, int idx);
-void insert_at_array(array *ary, int idx, value val);
 string *array_to_string(const array *ary);
-
 void dump_array(FILE *out, const array *ary);

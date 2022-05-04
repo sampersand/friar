@@ -5,23 +5,23 @@
 
 function *new_function(
 	char *function_name,
+	codeblock *body,
 	unsigned number_of_arguments,
 	char **argument_names,
-	codeblock *body,
-	char *source_filename,
 	unsigned source_line_number
+	const char *source_filename,
 ) {
 	assert(strlen(function_name) != 0);
 
 	function *func = xmalloc(sizeof(function));
 
 	func->function_name = function_name;
+	func->body = body;
+	func->refcount = 1;
 	func->number_of_arguments = number_of_arguments;
 	func->argument_names = argument_names;
-	func->refcount = 1;
-	func->body = body;
-	func->source_filename = source_filename;
 	func->source_line_number = source_line_number;
+	func->source_filename = source_filename;
 
 	return func;
 }
@@ -29,13 +29,13 @@ function *new_function(
 void deallocate_function(function *func) {
 	assert(func->refcount == 0);
 
+	free(func->function_name);
+	free_codeblock(func->body);
+
 	for (unsigned i = 0; i < func->number_of_arguments; i++)
 		free(func->argument_names[i]);
-
 	free(func->argument_names);
-	free(func->function_name);
-	free(func->source_filename);
-	free_codeblock(func->body);
+
 	free(func);
 }
 

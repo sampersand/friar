@@ -400,7 +400,7 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 		if (statement->local.initializer != NULL) {
 			compile_expression(builder, statement->local.initializer, new_local);
 		} else {
-			load_constant(builder, VNULL, new_local);
+			load_constant(builder, VALUE_NULL, new_local);
 		}
 
 		break;
@@ -408,7 +408,7 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 
 	case AST_STATEMENT_RETURN:
 		if (statement->return_.expression == NULL) {
-			load_constant(builder, VNULL, CODEBLOCK_RETURN_LOCAL);
+			load_constant(builder, VALUE_NULL, CODEBLOCK_RETURN_LOCAL);
 		} else {
 			compile_expression(builder, statement->return_.expression, CODEBLOCK_RETURN_LOCAL);
 		}
@@ -507,7 +507,7 @@ static value build_function(
 	unsigned number_of_arguments,
 	char **argument_names,
 	ast_block *body,
-	char *source_filename,
+	const char *source_filename,
 	unsigned source_line_number
 ) {
 	codeblock_builder builder;
@@ -536,27 +536,28 @@ static value build_function(
 	compile_block(&builder, body);
 
 	// all functions implicitly return `null` at the end.
-	load_constant(&builder, VNULL, CODEBLOCK_RETURN_LOCAL);
+	load_constant(&builder, VALUE_NULL, CODEBLOCK_RETURN_LOCAL);
 	set_opcode(&builder, OPCODE_RETURN);
-
-	codeblock *block = xmalloc(sizeof(codeblock));
-	block->code_length = builder.bytecode.length,
-	block->number_of_locals = builder.number_of_locals,
-	block->number_of_constants = builder.constants.length,
-	block->code = builder.bytecode.code,
-	block->constants = builder.constants.consts;
 
 	for (unsigned i = 0; i < builder.local_variables.length; i++)
 		free(builder.local_variables.entries[i].name);
 	free(builder.local_variables.entries);
 
+	codeblock *block = new_codeblock(
+		builder.number_of_locals,
+		builder.bytecode.length,
+		builder.bytecode.code,
+		builder.constants.length,
+		builder.constants.consts
+	);
+
 	return new_function_value(new_function(
 		function_name,
+		block,
 		number_of_arguments,
 		argument_names,
-		block,
-		source_filename,
 		source_line_number
+		source_filename,
 	));
 }
 
@@ -575,7 +576,7 @@ static void compile_declaration(ast_declaration *declaration) {
 			declaration->source.line_number
 		);
 
-		if (fetch_global_variable(global) != VNULL)
+		if (fetch_global_variable(global) != VALUE_NULL)
 			die("function %s redefined", declaration->function.name);
 
 		assign_global_variable(global, function);

@@ -71,9 +71,9 @@ static token parse_identifier(tokenizer *tzr) {
 	unsigned length = tzr->stream - start;
 
 	// check for predefined identifiers
-	if (!strncmp(start, "true", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VTRUE };
-	if (!strncmp(start, "false", 5)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VFALSE };
-	if (!strncmp(start, "null", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VNULL };
+	if (!strncmp(start, "true", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_TRUE };
+	if (!strncmp(start, "false", 5)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_FALSE };
+	if (!strncmp(start, "null", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_NULL };
 	if (!strncmp(start, "global", 6)) return (token) { .kind = TOKEN_KIND_GLOBAL };
 	if (!strncmp(start, "function", 8)) return (token) { .kind = TOKEN_KIND_FUNCTION };
 	if (!strncmp(start, "local", 5)) return (token) { .kind = TOKEN_KIND_LOCAL };
@@ -138,7 +138,7 @@ static token parse_string(tokenizer *tzr) {
 
 	unsigned length = 0;
 	unsigned capacity = 8;
-	char *str = xmalloc(capacity + 1); // `+1` for the trailing `\0`.
+	char *str = xmalloc(capacity); // no need for `+1` because strings dont have trailing `\0`.
 
 	unsigned starting_line = tzr->line_number;
 
@@ -152,14 +152,11 @@ static token parse_string(tokenizer *tzr) {
 
 		if (length == capacity) {
 			capacity *= 2;
-			str = xrealloc(str, capacity + 1);
+			str = xrealloc(str, capacity);
 		}
 
 		str[length++] = c;
 	}
-
-	str = xrealloc(str, length + 1);
-	str[length] = '\0';
 
 	return (token) {
 		.kind = TOKEN_KIND_LITERAL,

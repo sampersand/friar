@@ -4,7 +4,7 @@
 void init_global_variables(void);
 void free_global_variables(void);
 
-// returns the index of the global variable, creating it with a default of VNULL if it doesnt exist.
+// the index of the global variable, creating it with a default of VALUE_NULL if it doesnt exist.
 unsigned declare_global_variable(char *name);
 
 int lookup_global_variable(const char *name);

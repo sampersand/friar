@@ -12,20 +12,20 @@ void init_builtin_functions(void) {
 }
 
 value call_builtin_function(
-	const builtin_function *builtin,
+	const builtin_function *builtin_func,
 	unsigned number_of_arguments,
 	const value *arguments
 ) {
-	if (builtin->required_argument_count != number_of_arguments) {
+	if (builtin_func->required_argument_count != number_of_arguments) {
 		edie("argument mismatch, %s expected %d, but got %d",
-			builtin->name, builtin->required_argument_count, number_of_arguments);
+			builtin_func->name, builtin_func->required_argument_count, number_of_arguments);
 	}
 
-	return (builtin->function_pointer)(arguments);
+	return (builtin_func->function_pointer)(arguments);
 }
 
-void dump_builtin_function(FILE *out, const builtin_function *builtin) {
-	fprintf(out, "BuiltinFunction(%s)\n", builtin->name);
+void dump_builtin_function(FILE *out, const builtin_function *builtin_func) {
+	fprintf(out, "BuiltinFunction(%s)\n", builtin_func->name);
 }
 
 static value builtin_to_num_fn(const value *arguments) {
@@ -70,24 +70,21 @@ static value builtin_prompt_fn(const value *arguments) {
 }
 
 static value builtin_print_fn(const value *arguments) {
-	string *to_print;
-
-	if (is_string(arguments[0])) {
-		to_print = clone_string(as_string(arguments[0]));
-	} else {
-		to_print = value_to_string(arguments[0]);
-	}
+	string *to_print = value_to_string(arguments[0]);
 
 	printf("%.*s", to_print->length, to_print->ptr);
 	fflush(stdout);
+
 	free_string(to_print);
-	return VNULL;
+	return VALUE_NULL;
 }
 
 static value builtin_println_fn(const value *arguments) {
 	builtin_print_fn(arguments);
+
 	putchar('\n');
-	return VNULL;
+
+	return VALUE_NULL;
 }
 
 static value builtin_random_fn(const value *arguments) {
@@ -126,7 +123,8 @@ static value builtin_exit_fn(const value *arguments) {
 static value builtin_dump_fn(const value *arguments) {
 	dump_value(stdout, arguments[0]);
 	putchar('\n');
-	return arguments[0];
+
+	return clone_value(arguments[0]);
 }
 
 static value builtin_delete_fn(const value *arguments) {
@@ -137,7 +135,7 @@ static value builtin_delete_fn(const value *arguments) {
 		edie("index needs to be an integer for `delete`, not %s", value_name(arguments[1]));
 
 	value ret = delete_at_array(as_array(arguments[0]), as_number(arguments[1]));
-	return ret == VUNDEF ? VNULL : ret;
+	return ret == VALUE_UNDEFINED ? VALUE_NULL : ret;
 }
 
 static value builtin_insert_fn(const value *arguments) {
@@ -147,8 +145,15 @@ static value builtin_insert_fn(const value *arguments) {
 	if (!is_number(arguments[1]))
 		edie("index needs to be an integer for `insert`, not %s", value_name(arguments[1]));
 
-	insert_at_array(as_array(arguments[0]), as_number(arguments[1]), arguments[2]);
-	return arguments[0];
+	insert_at_array(as_array(arguments[0]), as_number(arguments[1]), clone_value(arguments[2]));
+
+	return clone_value(arguments[0]);
+}
+
+static value builtin_typeof_fn(const value *arguments) {
+	const char *typename = value_name(arguments[0]);
+
+	return new_string_value(new_string(strdup(typename), strlen(typename)));
 }
 
 builtin_function builtin_functions[] = {
@@ -201,6 +206,11 @@ builtin_function builtin_functions[] = {
 		.name = "insert",
 		.required_argument_count = 3,
 		.function_pointer = builtin_insert_fn
+	},
+	{
+		.name = "typeof",
+		.required_argument_count = 1,
+		.function_pointer = builtin_typeof_fn
 	},
 };
 

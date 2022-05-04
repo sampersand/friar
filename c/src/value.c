@@ -50,6 +50,7 @@ void free_value(value val) {
 		break;
 
 	default:
+		// We don't free builtin functions, as they're static for the lifetime of the program.
 		break;
 	}
 }
@@ -78,7 +79,7 @@ const char *value_kind_name(value_kind kind) {
 	case VALUE_KIND_ARRAY:            return "array";
 	case VALUE_KIND_NUMBER:           return "number";
 	case VALUE_KIND_FUNCTION:         return "function";
-	case VALUE_KIND_BUILTIN_FUNCTION: return "function"; // should be indistinguishable
+	case VALUE_KIND_BUILTIN_FUNCTION: return "function"; // Should be indistinguishable from user-defined
 	}
 }
 
@@ -124,7 +125,7 @@ value index_value(value val, value idx) {
 	case VALUE_KIND_ARRAY: {
 		value ret = index_array(as_array(val), num_idx);
 
-		if (ret == VUNDEF)
+		if (ret == VALUE_UNDEFINED)
 			edie("index %lld out of bounds for array of length %u", num_idx, as_array(val)->length);
 
 		return ret;
@@ -159,7 +160,7 @@ string *value_to_string(value val) {
 
 	// `new_string` requires ownership of its string, so we `strdup`.
 	case VALUE_KIND_BOOLEAN:
-		if (val == VTRUE) {
+		if (val == VALUE_TRUE) {
 			return new_string(strdup("true"), 4);
 		} else {
 			return new_string(strdup("false"), 5);
@@ -197,6 +198,7 @@ value add_values(value lhs, value rhs) {
 	string: {
 		string *l = value_to_string(lhs);
 		string *r = value_to_string(rhs);
+
 		string *ret = add_strings(l, r);
 
 		free_string(l);
@@ -287,11 +289,13 @@ int compare_values(value lhs, value rhs) {
 }
 
 bool equate_values(value lhs, value rhs) {
-	if (classify(lhs) != classify(rhs))
-		return false;
-
+	// if the two values have identical representation, then they're the same.
 	if (lhs == rhs)
 		return true;
+
+	// If they're not the same type, they're not equal.
+	if (classify(lhs) != classify(rhs))
+		return false;
 
 	switch (classify(lhs)) {
 	case VALUE_KIND_BOOLEAN:

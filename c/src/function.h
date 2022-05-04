@@ -17,25 +17,21 @@ typedef struct {
 	char **argument_names;
 
 	unsigned source_line_number;
-	char *source_filename;
+	const char *source_filename;
 } function;
 
 function *new_function(
 	char *function_name,
+	codeblock *body,
 	unsigned number_of_arguments,
 	char **argument_names,
-	codeblock *body,
-	char *source_filename,
 	unsigned source_line_number
+	const char *source_filename,
 );
 
 void deallocate_function(function *func);
 
 static inline void free_function(function *func) {
-#ifndef WE_SOLVED_FREE_ISSUES
-	return;
-#endif
-
 	assert(func->refcount != 0);
 
 	func->refcount--;
