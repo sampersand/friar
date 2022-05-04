@@ -43,7 +43,7 @@ static value builtin_print_fn(const value *arguments) {
 		to_print = value_to_string(arguments[0]);
 	}
 
-	printf("%s", to_print->ptr);
+	printf("%.*s", to_print->length, to_print->ptr);
 	fflush(stdout);
 	free_string(to_print);
 	return VNULL;

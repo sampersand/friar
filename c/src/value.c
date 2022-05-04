@@ -26,7 +26,7 @@ void dump_value(FILE *out, value val) {
 		break;
 
 	case VALUE_KIND_STRING:
-		fprintf(out, "String(%s)", as_string(val)->ptr);
+		fprintf(out, "String(%.*s)", as_string(val)->length, as_string(val)->ptr);
 		break;
 
 	case VALUE_KIND_NUMBER:
@@ -302,7 +302,7 @@ bool equate_values(value lhs, value rhs) {
 		return false; // If `lhs` isn't identical to `rhs`, then they're not equivalent.
 
 	case VALUE_KIND_STRING:
-		return !strcmp(as_string(lhs)->ptr, as_string(rhs)->ptr);
+		return equate_strings(as_string(lhs), as_string(rhs));
 
 	case VALUE_KIND_ARRAY:
 		return equate_arrays(as_array(lhs), as_array(rhs));
