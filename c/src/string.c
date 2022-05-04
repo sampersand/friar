@@ -2,7 +2,7 @@
 #include "shared.h"
 #include <assert.h>
 
-string *new_string2(char *ptr, unsigned length) {
+string *new_string(char *ptr, unsigned length) {
 	assert(strlen(ptr) == length);
 
 	string *str = xmalloc(sizeof(string));
@@ -22,8 +22,12 @@ void deallocate_string(string *str) {
 }
 
 string *index_string(const string *str, int idx) {
-	if (idx < 0)
-		TODO("negative indexing of strings isn't currently supported");
+	if (idx < 0) {
+		idx += str->length;
+
+		if (idx < 0)
+			return NULL;
+	}
 
 	if (str->length <= (unsigned) idx)
 		return NULL;
@@ -31,13 +35,17 @@ string *index_string(const string *str, int idx) {
 	string *ret = allocate_string(1);
 	ret->ptr[0] = str->ptr[idx];
 	ret->ptr[1] = '\0';
+	ret->length = 1;
 
 	return ret;
 }
 
 string *add_strings(string *lhs, string *rhs) {
-	if (lhs->length == 0) return clone_string(rhs);
-	if (rhs->length == 0) return clone_string(lhs);
+	if (lhs->length == 0)
+		return clone_string(rhs);
+
+	if (rhs->length == 0)
+		return clone_string(lhs);
 
 	string *str = allocate_string(lhs->length + rhs->length);
 	memcpy(str->ptr, lhs->ptr, lhs->length);
@@ -48,9 +56,7 @@ string *add_strings(string *lhs, string *rhs) {
 }
 
 int compare_strings(const string *lhs, const string *rhs) {
-	int cmp = strcmp(lhs->ptr, rhs->ptr);
-
-	return cmp < 0 ? -1 : cmp == 0 ? 0 : 1;
+	return strcmp(lhs->ptr, rhs->ptr);
 }
 
 string *replicate_string(string *str, unsigned amnt) {

@@ -31,9 +31,9 @@ typedef enum {
 	OPCODE_INDEX_ASSIGN
 } opcode;
 
-const char *opcode_repr(opcode op);
-
 typedef union {
 	opcode op;
 	unsigned count;
 } bytecode;
+
+const char *opcode_repr(opcode op);

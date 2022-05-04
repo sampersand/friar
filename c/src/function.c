@@ -3,14 +3,13 @@
 #include <assert.h>
 #include <string.h>
 
-
 function *new_function(
 	char *function_name,
 	unsigned number_of_arguments,
 	char **argument_names,
 	codeblock *body,
 	char *source_filename,
-	unsigned source_lineno
+	unsigned source_line_number
 ) {
 	assert(strlen(function_name) != 0);
 
@@ -22,7 +21,7 @@ function *new_function(
 	func->refcount = 1;
 	func->body = body;
 	func->source_filename = source_filename;
-	func->source_lineno = source_lineno;
+	func->source_line_number = source_line_number;
 
 	return func;
 }
@@ -40,22 +39,34 @@ void deallocate_function(function *func) {
 	free(func);
 }
 
-value call_function(const function *func, unsigned number_of_arguments, value *argv) {
+value call_function(const function *func, unsigned number_of_arguments, const value *arguments) {
 	if (func->number_of_arguments != number_of_arguments) {
 		edie("argument mismatch for %s: expected %d, got %d",
 			func->function_name, func->number_of_arguments, number_of_arguments);
 	}
 
-
 	source_code_location location = {
 		.filename = func->source_filename,
 		.function_name = func->function_name,
-		.lineno = func->source_lineno
+		.line_number = func->source_line_number
 	};
 
 	enter_stackframe(&location);
-	value ret = run_codeblock(func->body, number_of_arguments, argv);
+	value ret = run_codeblock(func->body, number_of_arguments, arguments);
 	leave_stackframe();
 
 	return ret;
+}
+
+void dump_function(FILE *out, const function *func) {
+	fprintf(out, "Function(%s, args=[", func->function_name);
+
+	for (unsigned i = 0; i < func->number_of_arguments; i++) {
+		if (i != 0)
+			fputs(", ", out);
+
+		fputs(func->argument_names[i], out);
+	}
+
+	fputs("])", out);
 }

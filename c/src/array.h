@@ -5,6 +5,7 @@
 #include "shared.h"
 #include "valuedefn.h"
 #include "string.h"
+#include <stdio.h>
 
 // The array type within friar.
 typedef struct {
@@ -58,3 +59,5 @@ array *replicate_array(array *ary, unsigned amnt);
 value delete_at_array(array *ary, int idx);
 void insert_at_array(array *ary, int idx, value val);
 string *array_to_string(const array *ary);
+
+void dump_array(FILE *out, const array *ary);

@@ -14,18 +14,22 @@ value call_builtin_function(
 	return (builtin_func->function_pointer)(arguments);
 }
 
+void dump_builtin_function(FILE *out, const builtin_function *builtin) {
+	fprintf(out, "BuiltinFunction(%s)\n", builtin->name);
+}
+
 static value builtin_to_str_fn(const value *arguments) {
 	return new_string_value(value_to_string(arguments[0]));
 }
 
 static value builtin_to_num_fn(const value *arguments) {
-	TODO("to num");
+	die("[todo] to num");
 	(void) arguments;
 	return VNULL;
 }
 
 static value builtin_prompt_fn(const value *arguments) {
-	TODO("prompt");
+	die("[todo] prompt");
 	(void) arguments;
 	return VNULL;
 }
@@ -53,7 +57,7 @@ static value builtin_println_fn(const value *arguments) {
 
 static value builtin_random_fn(const value *arguments) {
 	(void) arguments;
-	TODO("random fn");
+	die("[todo] random fn");
 	return VNULL;
 }
 
@@ -104,7 +108,6 @@ static value builtin_insert_fn(const value *arguments) {
 	insert_at_array(as_array(arguments[0]), as_number(arguments[1]), arguments[2]);
 	return arguments[0];
 }
-
 
 builtin_function builtin_functions[] = {
 	{

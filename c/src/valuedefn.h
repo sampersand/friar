@@ -4,14 +4,10 @@
 // being defined. However, `value.h` relies upon `array` and friends being defined for
 // functions like creation and casting.
 
-/*
-The value type.
-
-Note that friar has reference counting semantics.
-*/
+// The value type. Note that friar has reference counting semantics.
 typedef unsigned long long value;
 
-// since we do bit packing, we need this minimum alignment.
+// Since we do bit packing, we need this minimum alignment.
 #define VALUE_ALIGNMENT _Alignas(8)
 
 #define VFALSE 0

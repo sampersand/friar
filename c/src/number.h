@@ -3,8 +3,10 @@
 
 typedef long long number;
 
+// `compare_numbers` returns a negative, zero, or positive number depending on whether `lhs` is less
+// than, equal to, or greater than `rhs`.
 static inline int compare_numbers(number lhs, number rhs) {
-	return lhs == rhs ? 0 : lhs < rhs ? -1 : 1;
+	return lhs - rhs;
 }
 
 string *number_to_string(number num);

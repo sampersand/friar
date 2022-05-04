@@ -11,13 +11,16 @@ tokenizer new_tokenizer(const char *filename, const char *stream) {
 	return (tokenizer) {
 		.stream = stream,
 		.filename = filename,
-		.lineno = 1,
+		.line_number = 1,
 		.prev = (token) { .kind = TOKEN_KIND_UNDEFINED }
 	};
 }
 
-#define parse_error(tzr, msg, ...) (die(\
-	"invalid syntax at %d: " msg, tzr->lineno, __VA_ARGS__))
+#define parse_error(tzr, ...) (\
+	fprintf(stderr, "syntax error at %s:%d: ", tzr->filename, tzr->line_number),\
+	fprintf(stderr, __VA_ARGS__), \
+	fputc('\n', stderr), \
+	exit(1))
 
 static char peek(const tokenizer *tzr) {
 	return tzr->stream[0];
@@ -25,7 +28,7 @@ static char peek(const tokenizer *tzr) {
 
 static void advance(tokenizer *tzr) {
 	if (peek(tzr) == '\n')
-		tzr->lineno++;
+		tzr->line_number++;
 
 	tzr->stream++;
 }
@@ -34,6 +37,10 @@ static char peek_advance(tokenizer *tzr) {
 	char peeked = peek(tzr);
 	advance(tzr);
 	return peeked;
+}
+
+static bool is_alnum_or_underscore(char c) {
+	return isalnum(c) || c == '_';
 }
 
 static token parse_number(tokenizer *tzr) {
@@ -45,22 +52,22 @@ static token parse_number(tokenizer *tzr) {
 		advance(tzr);
 	}
 
-	if (isalnum(c) || c == '_')
+	if (is_alnum_or_underscore(c))
 		parse_error(tzr, "bad character '%c' after integer literal", c);
 
-	return (token) { .kind = TOKEN_KIND_LITERAL, .val = new_number_value(num) };
-}
-
-static bool isalnum_or_underscore(char c) {
-	return isalnum(c) || c == '_';
+	return (token) {
+		.kind = TOKEN_KIND_LITERAL,
+		.val = new_number_value(num)
+	};
 }
 
 static token parse_identifier(tokenizer *tzr) {
 	const char *start = tzr->stream;
 
 	// find the length of the identifier.
-	while (isalnum_or_underscore(peek(tzr)))
+	while (is_alnum_or_underscore(peek(tzr)))
 		advance(tzr);
+
 	unsigned length = tzr->stream - start;
 
 	// check for predefined identifiers
@@ -77,11 +84,14 @@ static token parse_identifier(tokenizer *tzr) {
 	if (!strncmp(start, "continue", 8)) return (token) { .kind = TOKEN_KIND_CONTINUE };
 	if (!strncmp(start, "return", 6)) return (token) { .kind = TOKEN_KIND_RETURN };
 
-	// it's a normal identifier, retunr that.
-	return (token) { .kind = TOKEN_KIND_IDENTIFIER, .str = strndup(start, length) };
+	// it's a normal identifier, return that.
+	return (token) {
+		.kind = TOKEN_KIND_IDENTIFIER,
+		.identifier = strndup(start, length)
+	};
 }
 
-static int parse_hex(tokenizer *tzr, char c) {
+static number parse_hex(const tokenizer *tzr, char c) {
 	if (isdigit(c))
 		return c - '0';
 
@@ -99,7 +109,9 @@ static char get_escape_char(tokenizer *tzr) {
 	switch (c) {
 	case '\'':
 	case '\"':
-	case '\\': return c;
+	case '\\':
+		return c;
+
 	case 'n': return '\n';
 	case 't': return '\t';
 	case 'r': return '\r';
@@ -108,7 +120,7 @@ static char get_escape_char(tokenizer *tzr) {
 
 	case 'x':
 		if (tzr->stream[0] == '\0' || tzr->stream[1] == '\0')
-			parse_error(tzr, "unterminated '\\x' sequence encountered %s", "");
+			parse_error(tzr, "unterminated '\\x' sequence encountered");
 
 		char upper_nibble = peek_advance(tzr);
 		char lower_nibble = peek_advance(tzr);
@@ -128,7 +140,7 @@ static token parse_string(tokenizer *tzr) {
 	unsigned capacity = 8;
 	char *str = xmalloc(capacity + 1); // `+1` for the trailing `\0`.
 
-	int starting_line = tzr->lineno;
+	unsigned starting_line = tzr->line_number;
 
 	char c;
 	while ((c = peek_advance(tzr)) != quote) {
@@ -151,15 +163,18 @@ static token parse_string(tokenizer *tzr) {
 
 	return (token) {
 		.kind = TOKEN_KIND_LITERAL,
-		.val = new_string_value(new_string2(str, length))
+		.val = new_string_value(new_string(str, length))
 	};
 }
 
 static void strip_leading_whitespace_and_comments(tokenizer *tzr) {
-	char c;
+	while (true) {
+		char c = peek(tzr);
 
-	while ((c = peek(tzr)) != '\0') {
-		// if `c` is a whitespace character, then just discard it.
+		// EOF encountered, nothign left to strip
+		if (c == '\0')
+			break;
+
 		if (isspace(c)) {
 			advance(tzr);
 			continue;
@@ -169,21 +184,18 @@ static void strip_leading_whitespace_and_comments(tokenizer *tzr) {
 		if (c == '/' && tzr->stream[1] == '/') {
 			while (c != '\0' && c != '\n')
 				c = peek_advance(tzr);
-
-			continue;
 		}
 
 		break;
 	}
 }
 
-static bool advance_if_equal(tokenizer *tzr) {
-	if (peek(tzr) == '=') {
-		advance(tzr);
-		return true;
-	}
+static token parse_optional_equals(tokenizer *tzr, token_kind if_not_equal, token_kind if_equal) {
+	if (peek(tzr) != '=') 
+		return (token) { .kind = if_not_equal };
 
-	return false;
+	advance(tzr);
+	return (token) { .kind = if_equal };
 }
 
 token next_token(tokenizer *tzr) {
@@ -196,13 +208,13 @@ token next_token(tokenizer *tzr) {
 	if (isdigit(c))
 		return parse_number(tzr);
 
-	if (isalpha(c) || c == '_')
+	if (is_alnum_or_underscore(c))
 		return parse_identifier(tzr);
 
 	if (c == '\'' || c == '\"')
 		return parse_string(tzr);
 
-	// We don't want to advance before calling the previous parser kinds.
+	// We don't advance before calling the previous parser kinds.
 	advance(tzr);
 
 	switch (c) {
@@ -227,50 +239,15 @@ token next_token(tokenizer *tzr) {
 			parse_error(tzr, "only `||` is recognized, not `|%c`", c);
 		return (token) { .kind = TOKEN_KIND_OR_OR };
 
-	case '=':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_EQUAL : TOKEN_KIND_ASSIGN
-		};
-
-	case '!':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_NOT_EQUAL : TOKEN_KIND_NOT
-		};
-
-	case '<':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_LESS_THAN_OR_EQUAL : TOKEN_KIND_LESS_THAN
-		};
-
-	case '>':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_GREATER_THAN_OR_EQUAL : TOKEN_KIND_GREATER_THAN
-		};
-
-	case '+':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_ADD_ASSIGN : TOKEN_KIND_ADD
-		};
-
-	case '-':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_SUBTRACT_ASSIGN : TOKEN_KIND_SUBTRACT
-		};
-
-	case '*':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_MULTIPLY_ASSIGN : TOKEN_KIND_MULTIPLY
-		};
-
-	case '/':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_DIVIDE_ASSIGN : TOKEN_KIND_DIVIDE
-		};
-
-	case '%':
-		return (token) {
-			.kind = advance_if_equal(tzr) ? TOKEN_KIND_MODULO_ASSIGN : TOKEN_KIND_MODULO
-		};
+	case '=': return parse_optional_equals(tzr, TOKEN_KIND_EQUAL, TOKEN_KIND_ASSIGN);
+	case '!': return parse_optional_equals(tzr, TOKEN_KIND_NOT_EQUAL, TOKEN_KIND_NOT);
+	case '<': return parse_optional_equals(tzr, TOKEN_KIND_LESS_THAN_OR_EQUAL, TOKEN_KIND_LESS_THAN);
+	case '>': return parse_optional_equals(tzr, TOKEN_KIND_GREATER_THAN_OR_EQUAL, TOKEN_KIND_GREATER_THAN);
+	case '+': return parse_optional_equals(tzr, TOKEN_KIND_ADD_ASSIGN, TOKEN_KIND_ADD);
+	case '-': return parse_optional_equals(tzr, TOKEN_KIND_SUBTRACT_ASSIGN, TOKEN_KIND_SUBTRACT);
+	case '*': return parse_optional_equals(tzr, TOKEN_KIND_MULTIPLY_ASSIGN, TOKEN_KIND_MULTIPLY);
+	case '/': return parse_optional_equals(tzr, TOKEN_KIND_DIVIDE_ASSIGN, TOKEN_KIND_DIVIDE);
+	case '%': return parse_optional_equals(tzr, TOKEN_KIND_MODULO_ASSIGN, TOKEN_KIND_MODULO);
 
 	default:
 		parse_error(tzr, "unknown token start: '%c' (%02x)", c, c);
@@ -282,7 +259,7 @@ void dump_token(FILE *out, token tkn) {
 	case TOKEN_KIND_UNDEFINED: fputs("UNDEF", out); break;
 
 	case TOKEN_KIND_LITERAL: dump_value(out, tkn.val); break;
-	case TOKEN_KIND_IDENTIFIER: fprintf(out, "Identifier(%s)\n", tkn.str); break;
+	case TOKEN_KIND_IDENTIFIER: fprintf(out, "Identifier(%s)\n", tkn.identifier); break;
 
 	case TOKEN_KIND_GLOBAL: fputs("Keyword(global)", out); break;
 	case TOKEN_KIND_FUNCTION: fputs("Keyword(function)", out); break;

@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define parse_error(tzr, ...) ( \
+	fprintf(stderr, "parse error at line %d: ", tzr->line_number), \
+	fprintf(stderr, __VA_ARGS__), \
+	exit(1))
+
 static token peek(tokenizer *tzr) {
 	if (tzr->prev.kind == TOKEN_KIND_UNDEFINED)
 		tzr->prev = next_token(tzr);
@@ -31,17 +36,13 @@ static bool guard(tokenizer *tzr, token_kind kind) {
 	return false;
 }
 
-#define parse_error(tzr, ...) (\
-	fprintf(stderr, "parse error at line %d: ", tzr->lineno), \
-	fprintf(stderr, __VA_ARGS__), exit(1))
-
 static char *expect_identifier(tokenizer *tzr, const char *whence) {
 	token tkn = advance(tzr);
 
 	if (tkn.kind != TOKEN_KIND_IDENTIFIER)
 		parse_error(tzr, "expected identifier %s", whence);
 
-	return tkn.str;
+	return tkn.identifier;
 }
 
 static ast_expression *parse_expression(tokenizer *tzr);
@@ -53,15 +54,19 @@ static ast_primary *parse_primary(tokenizer *tzr) {
 	switch (tkn.kind) {
 	case TOKEN_KIND_LPAREN:
 		primary->kind = AST_PRIMARY_PAREN;
+
 		primary->paren.expression = parse_expression(tzr);
 		if (primary->paren.expression == NULL)
 			parse_error(tzr, "expected an expression after `(`");
+
 		if (!guard(tzr, TOKEN_KIND_RPAREN))
 			parse_error(tzr, "expected `)` after expression within `(...)`");
+
 		break;
 
 	case TOKEN_KIND_LBRACKET:
 		primary->kind = AST_PRIMARY_ARRAY_LITERAL;
+
 		unsigned capacity = 4;
 		primary->array_literal.length = 0;
 		primary->array_literal.elements = xmalloc(capacity * sizeof(ast_expression *));
@@ -99,7 +104,7 @@ static ast_primary *parse_primary(tokenizer *tzr) {
 
 	case TOKEN_KIND_IDENTIFIER:
 		primary->kind = AST_PRIMARY_VARIABLE;
-		primary->variable.name = tkn.str;
+		primary->variable.name = tkn.identifier;
 		break;
 
 	case TOKEN_KIND_LITERAL:
@@ -150,7 +155,7 @@ static ast_primary *parse_primary(tokenizer *tzr) {
 				if (primary->function_call.number_of_arguments == capacity) {
 					capacity *= 2;
 					primary->function_call.arguments =
-						realloc(primary->function_call.arguments, capacity * sizeof(ast_expression *));
+						xrealloc(primary->function_call.arguments, capacity * sizeof(ast_expression *));
 				}
 
 				primary->function_call.arguments[primary->function_call.number_of_arguments] =
@@ -288,7 +293,7 @@ static ast_expression *parse_expression(tokenizer *tzr) {
 static ast_block *parse_block(tokenizer *tzr);
 
 static ast_statement *parse_statement(tokenizer *tzr) {
-	ast_statement *statement = malloc(sizeof(ast_statement));
+	ast_statement *statement = xmalloc(sizeof(ast_statement));
 	token tkn = advance(tzr);
 
 	switch (tkn.kind) {
@@ -306,7 +311,6 @@ static ast_statement *parse_statement(tokenizer *tzr) {
 
 		if (!guard(tzr, TOKEN_KIND_SEMICOLON))
 			parse_error(tzr, "expected `;` after `local`");
-
 		break;
 
 	case TOKEN_KIND_RETURN:
@@ -415,7 +419,7 @@ ast_declaration *next_declaration(tokenizer *tzr) {
 	ast_declaration *declaration = xmalloc(sizeof(ast_declaration));
 	token tkn = advance(tzr);
 
-	declaration->source.lineno = tzr->lineno;
+	declaration->source.line_number = tzr->line_number;
 	declaration->source.filename = strdup(tzr->filename);
 
 	switch (tkn.kind) {
@@ -467,7 +471,7 @@ ast_declaration *next_declaration(tokenizer *tzr) {
 		return NULL;
 
 	default:
-		fprintf(stderr, "parse error at line %d: unexpected token ", tzr->lineno);
+		fprintf(stderr, "parse error at line %d: unexpected token ", tzr->line_number);
 		dump_token(stderr, tkn);
 		exit(1);
 	}
@@ -672,141 +676,3 @@ void dump_ast_declaration(FILE *out, const ast_declaration *declaration) {
 		dump_ast_block(out, declaration->function.body, 1);
 	}
 }
-
-void free_ast_primary(ast_primary *primary) {
-	switch (primary->kind) {
-	case AST_PRIMARY_PAREN:
-		free_ast_expression(primary->paren.expression);
-		break;
-
-	case AST_PRIMARY_INDEX:
-		free_ast_primary(primary->index.source);
-		free_ast_expression(primary->index.index);
-		break;
-
-	case AST_PRIMARY_FUNCTION_CALL:
-		free_ast_primary(primary->function_call.function);
-
-		for (unsigned i = 0; i < primary->function_call.number_of_arguments; i++)
-			free_ast_expression(primary->function_call.arguments[i]);
-		free(primary->function_call.arguments);
-
-		break;
-
-	case AST_PRIMARY_UNARY_OPERATOR:
-		free_ast_primary(primary->unary_operator.primary);
-		break;
-
-	case AST_PRIMARY_ARRAY_LITERAL:
-		for (unsigned i = 0; i < primary->array_literal.length; i++)
-			free_ast_expression(primary->array_literal.elements[i]);
-		free(primary->array_literal.elements);
-		break;
-
-	case AST_PRIMARY_VARIABLE:
-		free(primary->variable.name);
-		break;
-
-	case AST_PRIMARY_LITERAL:
-		free_value(primary->literal.val);
-		break;
-	}
-
-	free(primary);
-}
-
-void free_ast_expression(ast_expression *expression) {
-	switch (expression->kind) {
-	case AST_EXPRESSION_ASSIGN:
-		free(expression->assign.name);
-		free_ast_expression(expression->assign.value);
-		break;
-
-	case AST_EXPRESSION_INDEX_ASSIGN:
-		free_ast_primary(expression->index_assign.source);
-		free_ast_expression(expression->index_assign.index);
-		free_ast_expression(expression->index_assign.value);
-		break;
-
-	case AST_EXPRESSION_SHORT_CIRCUIT_OPERATOR:
-		free_ast_primary(expression->short_circuit_operator.lhs);
-		free_ast_expression(expression->short_circuit_operator.rhs);
-		break;
-
-	case AST_EXPRESSION_BINARY_OPERATOR:
-		free_ast_primary(expression->binary_operator.lhs);
-		free_ast_expression(expression->binary_operator.rhs);
-		break;
-
-	case AST_EXPRESSION_PRIMARY:
-		free_ast_primary(expression->primary);
-		break;
-	}
-}
-
-void free_ast_statement(ast_statement *statement) {
-	switch (statement->kind) {
-	case AST_STATEMENT_LOCAL:
-		free(statement->local.name);
-		if (statement->local.initializer != NULL)
-			free_ast_expression(statement->local.initializer);
-		break;
-
-	case AST_STATEMENT_RETURN:
-		if (statement->return_.expression != NULL)
-			free_ast_expression(statement->return_.expression);
-		break;
-
-	case AST_STATEMENT_IF:
-		free_ast_expression(statement->if_.condition);
-		free_ast_block(statement->if_.if_true);
-		if (statement->if_.if_false != NULL)
-			free_ast_block(statement->if_.if_false);
-		break;
-
-	case AST_STATEMENT_WHILE:
-		free_ast_expression(statement->while_.condition);
-		free_ast_block(statement->while_.body);
-		break;
-
-	case AST_STATEMENT_BREAK:
-		break;
-
-	case AST_STATEMENT_CONTINUE:
-		break;
-
-	case AST_STATEMENT_EXPRESSION:
-		free_ast_expression(statement->expression);
-		break;
-	}
-
-	free(statement);
-}
-
-void free_ast_block(ast_block *block) {
-	for (unsigned i = 0; i < block->number_of_statements; i++)
-		free_ast_statement(block->statements[i]);
-
-	free(block->statements);
-	free(block);
-}
-
-void free_ast_declaration(ast_declaration *declaration) {
-	switch (declaration->kind) {
-	case AST_DECLARATION_GLOBAL:
-		free(declaration->global.name);
-		break;
-
-	case AST_DECLARATION_FUNCTION:
-		free(declaration->function.name);
-
-		for (unsigned i = 0; i < declaration->function.number_of_arguments; i++)
-			free(declaration->function.argument_names[i]);
-		free(declaration->function.argument_names);
-
-		free_ast_block(declaration->function.body);
-		break;
-	}
-	free(declaration);
-}
-

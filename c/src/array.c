@@ -25,11 +25,24 @@ void deallocate_array(array *ary) {
 	free(ary);
 }
 
-void push_array(array *ary, value val) {
-	if (ary->capacity == ary->length) {
-		ary->capacity = ary->capacity * 2 + 1;
-		ary->elements = xrealloc(ary->elements, ary->capacity * sizeof(value));
+static void reallocate_if_necessary(array *ary) {
+	assert(ary->length <= ary->capacity); // It makes no sense to have more elements than capacity.
+
+	if (ary->capacity != ary->length)
+		return;
+
+	// If `ary` is initially an empty array, start off with a capacity of 4. Otherwise, double it.
+	if (ary->capacity == 0) {
+		ary->capacity = 4;
+	} else {
+		ary->capacity *= 2;
 	}
+
+	ary->elements = xrealloc(ary->elements, ary->capacity * sizeof(value));
+}
+
+void push_array(array *ary, value val) {
+	reallocate_if_necessary(ary);
 
 	ary->elements[ary->length] = val;
 	ary->length++;
@@ -82,13 +95,16 @@ array *add_arrays(array *lhs, array *rhs) {
 
 	array *ret = allocate_array(lhs->length + rhs->length);
 
-	for (unsigned i = 0; i < lhs->length; i++)
-		ret->elements[i] = clone_value(lhs->elements[i]);
+	for (unsigned i = 0; i < lhs->length; i++) {
+		ret->elements[ret->length] = clone_value(lhs->elements[i]);
+		ret->length++;
+	}
 
-	for (unsigned i = 0; i < rhs->length; i++)
-		ret->elements[i + lhs->length] = clone_value(rhs->elements[i]);
+	for (unsigned i = 0; i < rhs->length; i++) {
+		ret->elements[ret->length] = clone_value(rhs->elements[i]);
+		ret->length++;
+	}
 
-	ret->length = lhs->length + rhs->length;
 	return ret;
 }
 
@@ -106,10 +122,6 @@ int compare_arrays(const array *lhs, const array *rhs) {
 }
 
 bool equate_arrays(const array *lhs, const array *rhs) {
-	// short circuit for identical arrays.
-	if (lhs == rhs)
-		return true;
-
 	if (lhs->length != rhs->length)
 		return false;
 
@@ -126,7 +138,6 @@ array *replicate_array(array *ary, unsigned amnt) {
 		return clone_array(ary);
 
 	array *ret = allocate_array(ary->length * amnt);
-	ret->length = 0;
 
 	for (unsigned i = 0; i < amnt; i++) {
 		for (unsigned j = 0; j < ary->length; j++) {
@@ -150,7 +161,8 @@ value delete_at_array(array *ary, int idx) {
 		return VUNDEF;
 
 	value deleted = ary->elements[idx];
-	// shift everything over.
+
+	// shift everything over left by one.
 	memmove(
 		ary->elements + idx,
 		ary->elements + idx + 1,
@@ -169,17 +181,15 @@ void insert_at_array(array *ary, int idx, value val) {
 			edie("cannot insert to negative indicies larger than `ary`'s length: %d", idx);
 	}
 
-
+	// Insertion out of bounds is identical to index assigning out of bounds.
 	if (ary->length <= (unsigned) idx) {
 		index_assign_array(ary, idx, val);
 		return;
 	}
 
-	if (ary->capacity == ary->length) {
-		ary->capacity = ary->capacity * 2 + 1;
-		ary->elements = xrealloc(ary->elements, ary->capacity * sizeof(value));
-	}
+	reallocate_if_necessary(ary);
 
+	// shift everything right by one.
 	for (unsigned i = ary->length; i > (unsigned) idx; i--)
 		ary->elements[i] = ary->elements[i - 1];
 
@@ -189,7 +199,7 @@ void insert_at_array(array *ary, int idx, value val) {
 
 string *array_to_string(const array *ary) {
 	if (ary->length == 0)
-		return new_string2(strdup("[]"), 2);
+		return new_string(strdup("[]"), 2);
 
 	unsigned length = 1; // as we start with `[`.
 	unsigned capacity = 8;
@@ -205,6 +215,7 @@ string *array_to_string(const array *ary) {
 			str = xrealloc(str, capacity);
 		}
 
+		// If it's not the first element in the array, add `, ` before it.
 		if (i != 0) {
 			str[length] = ',';
 			str[length + 1] = ' ';
@@ -216,9 +227,25 @@ string *array_to_string(const array *ary) {
 		free_string(element_string);
 	}
 
+	// Allocate space for the trailing `]\0`
 	if (capacity <= length + 2)
 		str = xrealloc(str, capacity + 2);
+
 	str[length] = ']';
 	str[length + 1] = '\0';
-	return new_string2(str, length + 1);
+
+	return new_string(str, length + 1);
+}
+
+void dump_array(FILE *out, const array *ary) {
+	fputs("Array(", out);
+
+	for (unsigned i = 0; i < ary->length; i++) {
+		if (i != 0)
+			fputs(", ", out);
+
+		dump_value(out, ary->elements[i]);
+	}
+
+	fputc(')', out);
 }

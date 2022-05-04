@@ -169,7 +169,7 @@ struct ast_declaration {
 
 	struct {
 		char *filename;
-		unsigned lineno;
+		unsigned line_number;
 	} source;
 
 	union {

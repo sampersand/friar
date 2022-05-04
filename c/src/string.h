@@ -10,21 +10,17 @@ typedef struct {
 	unsigned refcount, length;
 } string;
 
-string *new_string2(char *ptr, unsigned length);
-
-static inline string *new_string1(char *ptr) {
-	return new_string2(ptr, strlen(ptr));
-}
+string *new_string(char *ptr, unsigned length);
 
 static inline string *allocate_string(unsigned capacity) {
-	char *c = xmalloc(capacity + 1);
+	char *ptr = xmalloc(capacity + 1);
 
 #ifndef NDEBUG
-	// This is required because `new_string2` has an `assert(strlen)` in it.
-	c[0] = '\0';
+	// This is required because `new_string` has an `assert(strlen)` in it.
+	ptr[0] = '\0';
 #endif
 
-	return new_string2(c, 0);
+	return new_string(ptr, 0);
 }
 
 void deallocate_string(string *str);

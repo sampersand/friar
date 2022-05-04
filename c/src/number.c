@@ -9,5 +9,5 @@ string *number_to_string(number num) {
 	// We use `snprintf` just in case `long long`s aren't 64 bits for some reason
 	snprintf(buf, sizeof(buf), "%lld", num);
 
-	return new_string1(strdup(buf));
+	return new_string(strdup(buf), strlen(buf));
 }

@@ -6,38 +6,16 @@
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {
 	case VALUE_KIND_BUILTIN_FUNCTION:
-		fprintf(out, "BuiltinFunction(%s)\n", as_builtin_function(val)->name);
+		dump_builtin_function(out, as_builtin_function(val));
 		break;
 
-	case VALUE_KIND_FUNCTION: {
-		function *func = as_function(val);
-		fprintf(out, "Function(%s, args=[", func->function_name);
-
-		for (unsigned i = 0; i < func->number_of_arguments; i++) {
-			if (i != 0)
-				fputs(", ", out);
-
-			fputs(func->argument_names[i], out);
-		}
-
-		fputs("])", out);
+	case VALUE_KIND_FUNCTION:
+		dump_function(out, as_function(val));
 		break;
-	}
 
-	case VALUE_KIND_ARRAY: {
-		array *ary = as_array(val);
-
-		fprintf(out, "Array(");
-		for (unsigned i = 0; i < ary->length; i++) {
-			if (i != 0)
-				fputs(", ", out);
-
-			dump_value(out, ary->elements[i]);
-		}
-		fputc(')', out);
-
+	case VALUE_KIND_ARRAY:
+		dump_array(out, as_array(val));
 		break;
-	}
 
 	case VALUE_KIND_BOOLEAN:
 		fprintf(out, "Boolean(%s)", as_boolean(val) ? "true" : "false");
@@ -61,18 +39,18 @@ void free_value(value val) {
 	switch (classify(val)) {
 	case VALUE_KIND_STRING:
 		free_string(as_string(val));
-		return;
+		break;
 
 	case VALUE_KIND_ARRAY:
 		free_array(as_array(val));
-		return;
+		break;
 
 	case VALUE_KIND_FUNCTION:
 		free_function(as_function(val));
-		return;
+		break;
 
 	default:
-		return;
+		break;
 	}
 }
 
@@ -92,7 +70,6 @@ value clone_value(value val) {
 	}
 }
 
-
 const char *value_kind_name(value_kind kind) {
 	switch (kind) {
 	case VALUE_KIND_BOOLEAN:          return "boolean";
@@ -105,13 +82,13 @@ const char *value_kind_name(value_kind kind) {
 	}
 }
 
-value call_value(value val, unsigned argc, value *argv) {
+value call_value(value val, unsigned number_of_locals, const value *argument) {
 	switch (classify(val)) {
 	case VALUE_KIND_FUNCTION:
-		return call_function(as_function(val), argc, argv);
+		return call_function(as_function(val), number_of_locals, argument);
 
 	case VALUE_KIND_BUILTIN_FUNCTION:
-		return call_builtin_function(as_builtin_function(val), argc, argv);
+		return call_builtin_function(as_builtin_function(val), number_of_locals, argument);
 
 	default:
 		edie("cannot call a value of kind %s", value_name(val));
@@ -138,10 +115,8 @@ value index_value(value val, value idx) {
 	case VALUE_KIND_STRING: {
 		string *str = index_string(as_string(val), num_idx);
 
-		if (str == NULL) {
-			edie("index %lld is out of bounds for string of length %u",
-				num_idx, as_string(val)->length);
-		}
+		if (str == NULL)
+			edie("index %lld out of bounds for string of length %u", num_idx, as_string(val)->length);
 
 		return new_string_value(str);
 	}
@@ -149,10 +124,8 @@ value index_value(value val, value idx) {
 	case VALUE_KIND_ARRAY: {
 		value ret = index_array(as_array(val), num_idx);
 
-		if (ret == VUNDEF) {
-			edie("index %lld is out of bounds for array of length %u",
-				num_idx, as_array(val)->length);
-		}
+		if (ret == VUNDEF)
+			edie("index %lld out of bounds for array of length %u", num_idx, as_array(val)->length);
 
 		return ret;
 	}
@@ -184,16 +157,16 @@ string *value_to_string(value val) {
 	case VALUE_KIND_NUMBER:
 		return number_to_string(as_number(val));
 
-	// `new_string2` requires ownership of its string, so we `strdup`.
+	// `new_string` requires ownership of its string, so we `strdup`.
 	case VALUE_KIND_BOOLEAN:
 		if (val == VTRUE) {
-			return new_string2(strdup("true"), 4);
+			return new_string(strdup("true"), 4);
 		} else {
-			return new_string2(strdup("false"), 5);
+			return new_string(strdup("false"), 5);
 		}
 
 	case VALUE_KIND_NULL:
-		return new_string2(strdup("null"), 4);
+		return new_string(strdup("null"), 4);
 
 	case VALUE_KIND_ARRAY:
 		return array_to_string(as_array(val));
@@ -238,19 +211,18 @@ value add_values(value lhs, value rhs) {
 }
 
 value subtract_values(value lhs, value rhs) {
+	// Yes its backwards intentionally; English is weird.
 	if (!is_number(lhs) || !is_number(rhs)) {
 		edie("can only subtract numbers from numbers, not %s from %s",
-			value_name(rhs), value_name(lhs)); // yes its backwards intentionally; englihs is weird
+			value_name(rhs), value_name(lhs));
 	}
 
 	return new_number_value(as_number(lhs) - as_number(rhs));
 }
 
 value multiply_values(value lhs, value rhs) {
-	if (!is_number(rhs))  {
-		edie("can only multiply numbers, strings, and arrays by numbers, not %ss",
-			value_name(rhs));
-	}
+	if (!is_number(rhs)) 
+		edie("can only multiply numbers, strings, and arrays by numbers, not %ss", value_name(rhs));
 
 	number amnt = as_number(rhs);
 
@@ -276,10 +248,8 @@ value multiply_values(value lhs, value rhs) {
 }
 
 value divide_values(value lhs, value rhs) {
-	if (!is_number(lhs) || !is_number(rhs)) {
-		edie("can only divide numbers from numbers, not %s from %s",
-			value_name(rhs), value_name(lhs)); // yes its backwards intentionally; english is weird
-	}
+	if (!is_number(lhs) || !is_number(rhs))
+		edie("can only divide numbers by numbers, not %s from %s", value_name(lhs), value_name(rhs));
 
 	if (as_number(rhs) == 0)
 		edie("division by zero!");
@@ -288,10 +258,8 @@ value divide_values(value lhs, value rhs) {
 }
 
 value modulo_values(value lhs, value rhs) {
-	if (!is_number(lhs) || !is_number(rhs)) {
-		edie("can only modulo numbers from numbers, not %s from %s",
-			value_name(rhs), value_name(lhs)); // yes its backwards intentionally; english is weird
-	}
+	if (!is_number(lhs) || !is_number(rhs))
+		edie("can only modulo numbers by numbers, not %s from %s", value_name(lhs), value_name(rhs));
 
 	if (as_number(rhs) == 0)
 		edie("modulo by zero!");
@@ -300,10 +268,8 @@ value modulo_values(value lhs, value rhs) {
 }
 
 int compare_values(value lhs, value rhs) {
-	if (classify(lhs) != classify(rhs)) {
-		edie("can only compare like kinds together, not %s to %s",
-			value_name(lhs), value_name(rhs));
-	}
+	if (classify(lhs) != classify(rhs))
+		edie("can only compare like kinds together, not %s to %s", value_name(lhs), value_name(rhs));
 
 	switch (classify(lhs)) {
 	case VALUE_KIND_NUMBER:
@@ -324,13 +290,16 @@ bool equate_values(value lhs, value rhs) {
 	if (classify(lhs) != classify(rhs))
 		return false;
 
+	if (lhs == rhs)
+		return true;
+
 	switch (classify(lhs)) {
 	case VALUE_KIND_BOOLEAN:
 	case VALUE_KIND_NULL:
 	case VALUE_KIND_NUMBER:
 	case VALUE_KIND_FUNCTION:
 	case VALUE_KIND_BUILTIN_FUNCTION:
-		return lhs == rhs;
+		return false; // If `lhs` isn't identical to `rhs`, then they're not equivalent.
 
 	case VALUE_KIND_STRING:
 		return !strcmp(as_string(lhs)->ptr, as_string(rhs)->ptr);

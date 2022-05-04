@@ -12,6 +12,7 @@ typedef struct {
 void free_codeblock(codeblock *block) {
 	for (unsigned i = 0; i < block->number_of_constants; i++)
 		free_value(block->constants[i]);
+
 	free(block->constants);
 	free(block->code);
 	free(block);
@@ -241,6 +242,7 @@ static void run_index_assign(virtual_machine *vm) {
 	value source = next_local(vm);
 	value index = next_local(vm);
 	value val = next_local(vm);
+
 	index_assign_value(source, index, val);
 	set_next_local(vm, val);
 }
@@ -282,7 +284,7 @@ static void run_vm(virtual_machine *vm) {
 	}
 }
 
-value run_codeblock(const codeblock *block, unsigned argc, const value *argv) {
+value run_codeblock(const codeblock *block, unsigned number_of_arguments, const value *arguments) {
 	virtual_machine vm;
 
 	vm.block = block;
@@ -294,8 +296,8 @@ value run_codeblock(const codeblock *block, unsigned argc, const value *argv) {
 	for (unsigned i = 0; i < block->number_of_locals; i++)
 		vm.locals[i] = VUNDEF;
 
-	for (unsigned i = 0; i < argc; i++)
-		vm.locals[i + 1] = argv[i];
+	for (unsigned i = 0; i < number_of_arguments; i++)
+		vm.locals[i + 1] = clone_value(arguments[i]);
 
 	run_vm(&vm);
 
@@ -305,5 +307,5 @@ value run_codeblock(const codeblock *block, unsigned argc, const value *argv) {
 			free_value(locals[i]);
 	}
 
-	return locals[0];
+	return locals[CODEBLOCK_RETURN_LOCAL];
 }

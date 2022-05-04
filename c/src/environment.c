@@ -4,12 +4,10 @@
 #include <stdlib.h>
 #include <assert.h>
 
-
 _Thread_local struct {
 	unsigned stack_pointer;
 	const source_code_location *stackframes[STACKFRAME_LIMIT];
 } environment;
-
 
 void init_environment(void) {
 	environment.stack_pointer = 0;
@@ -31,6 +29,7 @@ void enter_stackframe(const source_code_location *location) {
 
 void leave_stackframe(void) {
 	assert(environment.stack_pointer != 0);
+
 	environment.stack_pointer--;
 }
 
@@ -39,6 +38,6 @@ void dump_stacktrace(FILE *out) {
 		const source_code_location *location = environment.stackframes[i];
 
 		fprintf(out, "%d: %s:%d in %s\n",
-			i, location->filename, location->lineno, location->function_name);
+			i, location->filename, location->line_number, location->function_name);
 	}
 }

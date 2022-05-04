@@ -261,7 +261,6 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		break;
 	}
 
-
 	case AST_PRIMARY_LITERAL:
 		load_constant(builder, primary->literal.val, target_local);
 		break;
@@ -285,7 +284,6 @@ static opcode binary_operator_to_opcode(binary_operator operator) {
 	case BINARY_OP_GREATER_THAN_OR_EQUAL: return OPCODE_GREATER_THAN_OR_EQUAL;
 	}
 }
-
 
 static void compile_expression(codeblock_builder *builder, ast_expression *expression, unsigned target_local) {
 	switch (expression->kind) {
@@ -510,7 +508,7 @@ static value build_function(
 	char **argument_names,
 	ast_block *body,
 	char *source_filename,
-	unsigned source_lineno
+	unsigned source_line_number
 ) {
 	codeblock_builder builder;
 
@@ -557,7 +555,7 @@ static value build_function(
 		argument_names,
 		block,
 		source_filename,
-		source_lineno
+		source_line_number
 	));
 }
 
@@ -573,7 +571,7 @@ static void compile_declaration(ast_declaration *declaration) {
 			declaration->function.argument_names,
 			declaration->function.body,
 			declaration->source.filename,
-			declaration->source.lineno
+			declaration->source.line_number
 		);
 
 		if (fetch_global_variable(global) != VNULL)

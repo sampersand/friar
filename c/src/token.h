@@ -5,7 +5,7 @@
 typedef enum {
 	// Indicates that the token isn't actually a token.
 	// This is used for things like marking the end of a stream.
-	TOKEN_KIND_UNDEFINED = 0,
+	TOKEN_KIND_UNDEFINED,
 
 	// These two make use of the `union` within the `token`.
 	TOKEN_KIND_LITERAL, TOKEN_KIND_IDENTIFIER,
@@ -45,13 +45,13 @@ typedef struct {
 	token_kind kind;
 	union {
 		value val;
-		char *str;
+		char *identifier;
 	};
 } token;
 
 typedef struct {
 	const char *stream, *filename;
-	int lineno;
+	unsigned line_number;
 	token prev;
 } tokenizer;
 

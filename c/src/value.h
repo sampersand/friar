@@ -207,7 +207,7 @@ value clone_value(value val);
 string *value_to_string(value val);
 
 // Calls `val` with the given arguments.
-value call_value(value val, unsigned number_of_arguments, value *arguments);
+value call_value(value val, unsigned number_of_arguments, const value *arguments);
 
 // Numerically negates `val`.
 value negate_value(value val);
