@@ -2,24 +2,20 @@
 #include "value.h"
 
 value call_builtin_function(
-	builtin_function *builtin_func,
+	builtin_function *builtin,
 	unsigned number_of_arguments,
 	const value *arguments
 ) {
-	if (builtin_func->required_argument_count != number_of_arguments) {
+	if (builtin->required_argument_count != number_of_arguments) {
 		edie("argument mismatch, %s expected %d, but got %d",
-			builtin_func->name, builtin_func->required_argument_count, number_of_arguments);
+			builtin->name, builtin->required_argument_count, number_of_arguments);
 	}
 
-	return (builtin_func->function_pointer)(arguments);
+	return (builtin->function_pointer)(arguments);
 }
 
 void dump_builtin_function(FILE *out, const builtin_function *builtin) {
 	fprintf(out, "BuiltinFunction(%s)\n", builtin->name);
-}
-
-static value builtin_to_str_fn(const value *arguments) {
-	return new_string_value(value_to_string(arguments[0]));
 }
 
 static value builtin_to_num_fn(const value *arguments) {
@@ -110,11 +106,6 @@ static value builtin_insert_fn(const value *arguments) {
 }
 
 builtin_function builtin_functions[] = {
-	{
-		.name = "to_str",
-		.required_argument_count = 1,
-		.function_pointer = builtin_to_str_fn
-	},
 	{
 		.name = "to_num",
 		.required_argument_count = 1,

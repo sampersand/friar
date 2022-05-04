@@ -9,7 +9,7 @@ typedef struct {
 	value (*function_pointer)(const value *arguments);
 } builtin_function;
 
-#define NUMBER_OF_BUILTIN_FUNCTIONS 11
+#define NUMBER_OF_BUILTIN_FUNCTIONS 10
 extern builtin_function builtin_functions[NUMBER_OF_BUILTIN_FUNCTIONS];
 
 value call_builtin_function(
