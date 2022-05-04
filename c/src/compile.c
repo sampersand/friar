@@ -4,6 +4,7 @@
 #include "shared.h"
 #include "function.h"
 #include "value.h"
+#include "globals.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -31,7 +32,6 @@ typedef struct {
 #endif
 
 typedef struct {
-	compiler *comp;
 	local_variable_map local_variables;
 
 	unsigned number_of_locals;
@@ -55,10 +55,6 @@ typedef struct {
 		} breaks[MAX_NUMBER_OF_NESTED_WHILES];
 	} whiles;
 } codeblock_builder;
-
-void init_compiler(compiler *comp) {
-	comp->globals = new_global_variables();
-}
 
 static unsigned next_local_index(codeblock_builder *builder) {
 	unsigned local_index = builder->number_of_locals;
@@ -150,7 +146,7 @@ static void load_constant(codeblock_builder *builder, value val, unsigned target
 	unsigned constant_index;
 
 	for (unsigned i = 0; i < builder->constants.length; i++) {
-		if (equate_values(builder->constants.consts[i], val, NULL)) {
+		if (equate_values(builder->constants.consts[i], val)) {
 			constant_index = i;
 			free_value(val);
 			goto found_constant;
@@ -249,7 +245,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		int local_index = lookup_local_variable(builder, primary->variable.name);
 
 		if (local_index == -1) {
-			int global_index = lookup_global_variable(builder->comp->globals, primary->variable.name);
+			int global_index = lookup_global_variable(primary->variable.name);
 
 			if (global_index == -1)
 				die("undeclared variable '%s'.", primary->variable.name);
@@ -313,7 +309,7 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		break;
 
 	assign_global:;
-		int global_index = lookup_global_variable(builder->comp->globals, expression->assign.name);
+		int global_index = lookup_global_variable(expression->assign.name);
 		if (global_index == -1)
 			die("unknown variable '%s'; declare it first.", expression->assign.name);
 
@@ -509,7 +505,6 @@ static void compile_block(codeblock_builder *builder, ast_block *block) {
 }
 
 static value build_function(
-	compiler *comp,
 	char *function_name,
 	unsigned number_of_arguments,
 	char **argument_names,
@@ -519,7 +514,6 @@ static value build_function(
 ) {
 	codeblock_builder builder;
 
-	builder.comp = comp;
 	builder.local_variables.length = 0;
 	builder.local_variables.capacity = 4;
 	builder.local_variables.entries =
@@ -567,14 +561,13 @@ static value build_function(
 	));
 }
 
-void compile_declaration(compiler *comp, ast_declaration *declaration) {
+static void compile_declaration(ast_declaration *declaration) {
 	switch (declaration->kind) {
 	case AST_DECLARATION_FUNCTION: {
 		// declare it beforehand so recursive functions can reference the defn.
-		unsigned global = declare_global_variable(comp->globals, declaration->function.name);
+		unsigned global = declare_global_variable(declaration->function.name);
 
 		value function = build_function(
-			comp,
 			declaration->function.name,
 			declaration->function.number_of_arguments,
 			declaration->function.argument_names,
@@ -583,17 +576,34 @@ void compile_declaration(compiler *comp, ast_declaration *declaration) {
 			declaration->source.lineno
 		);
 
-		if (fetch_global_variable(comp->globals, global) != VNULL)
+		if (fetch_global_variable(global) != VNULL)
 			die("function %s redefined", declaration->function.name);
 
-		assign_global_variable(comp->globals, global, function);
+		assign_global_variable(global, function);
 		break;
 	}
 
 	case AST_DECLARATION_GLOBAL:
-		declare_global_variable(comp->globals, declaration->global.name);
+		declare_global_variable(declaration->global.name);
 		break;
 	}
 
 	free(declaration);
+}
+
+void compile(const char *filename, const char *source_code) {
+	tokenizer tzr = new_tokenizer(filename, source_code);
+
+	while (true) {
+		ast_declaration *declaration = next_declaration(&tzr);
+
+		if (declaration == NULL)
+			break;
+
+#ifdef ENABLE_LOGGING
+		dump_ast_declaration(stdout, declaration);
+#endif
+
+		compile_declaration(declaration);
+	}
 }

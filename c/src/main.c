@@ -2,36 +2,27 @@
 #include "value.h"
 #include "compile.h"
 #include "codeblock.h"
+#include "environment.h"
+#include "globals.h"
 
-void run_declaration(ast_declaration*, environment*);
-// value run_codeblock(const codeblock *block, environment *env);
-
-environment env;
 int main(int argc, char **argv) {
-	(void) argc;
-	tokenizer tzr = new_tokenizer(argv[2], "-e");
+	if (argc != 3)
+		die("usage: %s -e <program>", argv[0]);
 
-	compiler comp;
-	init_compiler(&comp);
-	init_environment(&env);
-	ast_declaration *d;
-	while ((d = next_declaration(&tzr))) {
-#ifdef ENABLE_LOGGING
-		dump_ast_declaration(stdout, d);
-#endif
-		compile_declaration(&comp, d);
-	}
+	init_environment();
+	init_global_variables();
 
-	env.globals = comp.globals;
+	compile("-e", argv[2]);
 
-	// 	exit(0);
-
-	int main_index = lookup_global_variable(comp.globals, "main");
+	int main_index = lookup_global_variable("main");
 	if (main_index == -1)
 		die("you must define a `main` function");
 
-	value ret = call_value(fetch_global_variable(comp.globals, main_index), 0, NULL, &env);
+	value ret = call_value(fetch_global_variable(main_index), 0, NULL);
+
+	free_environment();
+	free_global_variables();
+	
 	if (is_number(ret))
 		return as_number(ret);
-	// free_environment(&env);
 }

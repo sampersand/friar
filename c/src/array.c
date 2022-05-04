@@ -60,7 +60,7 @@ void index_assign_array(array *ary, int idx, value val) {
 		idx += ary->length;
 
 		if (idx < 0)
-			die("cannot assign to negative indicies larger than `ary`'s length: %d", idx);
+			edie("cannot assign to negative indicies larger than `ary`'s length: %d", idx);
 	}
 
 
@@ -87,11 +87,11 @@ array *add_arrays(array *lhs, array *rhs) {
 	return ret;
 }
 
-int compare_arrays(const array *lhs, const array *rhs, const environment *env) {
+int compare_arrays(const array *lhs, const array *rhs) {
 	unsigned min = lhs->length < rhs->length ? lhs->length : rhs->length;
 
 	for (unsigned i = 0; i < min; i++) {
-		int cmp = compare_values(lhs->elements[i], rhs->elements[i], env);
+		int cmp = compare_values(lhs->elements[i], rhs->elements[i]);
 
 		if (cmp != 0)
 			return cmp;
@@ -100,7 +100,7 @@ int compare_arrays(const array *lhs, const array *rhs, const environment *env) {
 	return compare_numbers(lhs->length, rhs->length);
 }
 
-bool equate_arrays(const array *lhs, const array *rhs, const environment *env) {
+bool equate_arrays(const array *lhs, const array *rhs) {
 	// short circuit for identical arrays.
 	if (lhs == rhs)
 		return true;
@@ -109,7 +109,7 @@ bool equate_arrays(const array *lhs, const array *rhs, const environment *env) {
 		return false;
 
 	for (unsigned i = 0; i < lhs->length; i++) {
-		if (!equate_values(lhs->elements[i], rhs->elements[i], env))
+		if (!equate_values(lhs->elements[i], rhs->elements[i]))
 			return false;
 	}
 
@@ -161,7 +161,7 @@ void insert_at_array(array *ary, int idx, value val) {
 		idx += ary->length;
 
 		if (idx < 0)
-			die("cannot insert to negative indicies larger than `ary`'s length: %d", idx);
+			edie("cannot insert to negative indicies larger than `ary`'s length: %d", idx);
 	}
 
 

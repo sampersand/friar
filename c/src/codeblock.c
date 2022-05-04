@@ -6,7 +6,6 @@
 typedef struct {
 	const codeblock *block;
 	unsigned instruction_pointer;
-	environment *env;
 	value* locals;
 } virtual_machine;
 
@@ -96,14 +95,14 @@ static void run_load_constant(virtual_machine *vm) {
 static void run_load_global_variable(virtual_machine *vm) {
 	unsigned global_index = next_count(vm);
 
-	set_next_local(vm, fetch_global_variable(vm->env->globals, global_index));
+	set_next_local(vm, fetch_global_variable(global_index));
 }
 
 static void run_store_global_variable(virtual_machine *vm) {
 	unsigned global_index = next_count(vm);
 	value value = next_local(vm);
 
-	assign_global_variable(vm->env->globals, global_index, value);
+	assign_global_variable(global_index, value);
 	set_next_local(vm, value);
 }
 
@@ -135,7 +134,7 @@ static void run_call(virtual_machine *vm) {
 	for (unsigned i = 0; i < arg_count; i++)
 		arguments[i] = next_local(vm);
 
-	set_next_local(vm, call_value(function, arg_count, arguments, vm->env));
+	set_next_local(vm, call_value(function, arg_count, arguments));
 }
 
 static void run_return(virtual_machine *vm) {
@@ -145,104 +144,104 @@ static void run_return(virtual_machine *vm) {
 static void run_not(virtual_machine *vm) {
 	value arg = next_local(vm);
 
-	set_next_local(vm, not_value(arg, vm->env));
+	set_next_local(vm, not_value(arg));
 }
 
 static void run_negate(virtual_machine *vm) {
 	value arg = next_local(vm);
 
-	set_next_local(vm, negate_value(arg, vm->env));
+	set_next_local(vm, negate_value(arg));
 }
 
 static void run_add(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, add_values(lhs, rhs, vm->env));
+	set_next_local(vm, add_values(lhs, rhs));
 }
 
 static void run_subtract(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, subtract_values(lhs, rhs, vm->env));
+	set_next_local(vm, subtract_values(lhs, rhs));
 }
 
 static void run_multiply(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, multiply_values(lhs, rhs, vm->env));
+	set_next_local(vm, multiply_values(lhs, rhs));
 }
 
 static void run_divide(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, divide_values(lhs, rhs, vm->env));
+	set_next_local(vm, divide_values(lhs, rhs));
 }
 
 static void run_modulo(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, modulo_values(lhs, rhs, vm->env));
+	set_next_local(vm, modulo_values(lhs, rhs));
 }
 
 static void run_equal(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, new_boolean_value(equate_values(lhs, rhs, vm->env)));
+	set_next_local(vm, new_boolean_value(equate_values(lhs, rhs)));
 }
 
 static void run_not_equal(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, new_boolean_value(!equate_values(lhs, rhs, vm->env)));
+	set_next_local(vm, new_boolean_value(!equate_values(lhs, rhs)));
 }
 
 static void run_less_than(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs, vm->env) < 0));
+	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs) < 0));
 }
 
 static void run_less_than_or_equal(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs, vm->env) <= 0));
+	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs) <= 0));
 }
 
 static void run_greater_than(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs, vm->env) > 0));
+	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs) > 0));
 }
 
 static void run_greater_than_or_equal(virtual_machine *vm) {
 	value lhs = next_local(vm);
 	value rhs = next_local(vm);
 
-	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs, vm->env) >= 0));
+	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs) >= 0));
 }
 
 static void run_index(virtual_machine *vm) {
 	value source = next_local(vm);
 	value index = next_local(vm);
 
-	set_next_local(vm, index_value(source, index, vm->env));
+	set_next_local(vm, index_value(source, index));
 }
 
 static void run_index_assign(virtual_machine *vm) {
 	value source = next_local(vm);
 	value index = next_local(vm);
 	value val = next_local(vm);
-	index_assign_value(source, index, val, vm->env);
+	index_assign_value(source, index, val);
 	set_next_local(vm, val);
 }
 
@@ -283,12 +282,11 @@ static void run_vm(virtual_machine *vm) {
 	}
 }
 
-value run_codeblock(const codeblock *block, unsigned argc, const value *argv, environment *env) {
+value run_codeblock(const codeblock *block, unsigned argc, const value *argv) {
 	virtual_machine vm;
 
 	vm.block = block;
 	vm.instruction_pointer = 0;
-	vm.env = env;
 
 	value locals[block->number_of_locals];
 	vm.locals = locals;

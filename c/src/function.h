@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include "ast.h"
-#include "environment.h"
 #include "valuedefn.h"
 #include "codeblock.h"
 #include <stdalign.h>
@@ -47,4 +46,4 @@ static inline function *clone_function(function *func) {
 	return func;
 }
 
-value call_function(const function *func, unsigned argc, value *argv, environment *env);
+value call_function(const function *func, unsigned argc, value *argv);

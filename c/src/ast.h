@@ -2,7 +2,6 @@
 
 #include "valuedefn.h"
 #include "token.h"
-#include "environment.h"
 
 typedef struct ast_expression ast_expression;
 typedef struct ast_primary ast_primary;
@@ -189,7 +188,6 @@ struct ast_declaration {
 	};
 };
 
-int run_block(const ast_block *block, value *ret, environment *env);
 ast_declaration *next_declaration(tokenizer *tzr);
 
 void free_ast_primary(ast_primary *primary);

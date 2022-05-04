@@ -4,29 +4,37 @@
 #include <stdlib.h>
 #include <assert.h>
 
-void init_environment(environment *env) {
-	env->stack_pointer = 0;
+
+_Thread_local struct {
+	unsigned stack_pointer;
+	const source_code_location *stackframes[STACKFRAME_LIMIT];
+} environment;
+
+
+void init_environment(void) {
+	environment.stack_pointer = 0;
 }
 
-void free_environment(environment *env) {
-	assert(env->stack_pointer == 0);
+void free_environment(void) {
+	assert(environment.stack_pointer == 0);
 }
 
-void enter_stackframe(environment *env, const source_code_location *location) {
-	if (env->stack_pointer == STACKFRAME_LIMIT)
+void enter_stackframe(const source_code_location *location) {
+	if (environment.stack_pointer == STACKFRAME_LIMIT)
 		die("stack level too deep (%d levels deep)", STACKFRAME_LIMIT);
 
-	env->stackframes[env->stack_pointer] = location;
-	env->stack_pointer++;
+	environment.stackframes[environment.stack_pointer] = location;
+	environment.stack_pointer++;
 }
 
-void leave_stackframe(environment *env) {
-	env->stack_pointer--;
+void leave_stackframe(void) {
+	assert(environment.stack_pointer != 0);
+	environment.stack_pointer--;
 }
 
-void dump_stacktrace(FILE *out, const environment *env) {
-	for (unsigned i = 0; i < env->stack_pointer; i++) {
-		const source_code_location *location = env->stackframes[i];
+void dump_stacktrace(FILE *out) {
+	for (unsigned i = 0; i < environment.stack_pointer; i++) {
+		const source_code_location *location = environment.stackframes[i];
 
 		fprintf(out, "%d: ", i);
 

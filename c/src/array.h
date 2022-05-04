@@ -5,7 +5,6 @@
 #include "shared.h"
 #include "valuedefn.h"
 #include "string.h"
-#include "environment.h"
 
 // The array type within friar.
 typedef struct {
@@ -52,8 +51,8 @@ value pop_array(array *ary);
 value index_array(const array *ary, int idx);
 void index_assign_array(array *ary, int idx, value val);
 array *add_arrays(array *lhs, array *rhs);
-int compare_arrays(const array *lhs, const array *rhs, const environment *env);
-bool equate_arrays(const array *lhs, const array *rhs, const environment *env);
+int compare_arrays(const array *lhs, const array *rhs);
+bool equate_arrays(const array *lhs, const array *rhs);
 array *replicate_array(array *ary, unsigned amnt);
 
 value delete_at_array(array *ary, int idx);

@@ -1,7 +1,7 @@
 function fizzbuzz1(max) {
 	local i = 0;
 
-	while i < (max - 1) {
+	while i < max {
 		i += 1;
 
 		if (i % 15) == 0 { println("FizzBuzz"); continue; }
@@ -15,7 +15,7 @@ function fizzbuzz1(max) {
 function fizzbuzz2(max) {
 	local ary = [null];
 
-	while length(ary) < max {
+	while length(ary) <= max {
 		local i = length(ary);
 		ary[i] = "";
 
@@ -25,12 +25,12 @@ function fizzbuzz2(max) {
 	}
 
 	local i = 0;
-	while (i += 1) < max {
+	while (i += 1) <= max {
 		println(ary[i]);
 	}
 }
 
 function main() {
-	//fizzbuzz1(16);
+//	fizzbuzz1(100);
 	fizzbuzz2(16);
 }

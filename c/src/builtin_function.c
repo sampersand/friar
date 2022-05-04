@@ -4,13 +4,8 @@
 value call_builtin_function(
 	builtin_function *builtin_func,
 	unsigned number_of_arguments,
-	const value *arguments,
-	environment *env
+	const value *arguments
 ) {
-	// No builtin functions need access to the env.
-	// But some may, such as `map` or `reduce`, if those were to ever be implemented.
-	(void) env;
-
 	if (builtin_func->required_argument_count != number_of_arguments) {
 		die("argument mismatch, %s expected %d, but got %d",
 			builtin_func->name, builtin_func->required_argument_count, number_of_arguments);
