@@ -46,17 +46,17 @@ enum {
 /*
  * An enum used to indicate what type a `value` is.
  *
- * Note that this is separate from the `VALUE_TAG_`s, as booleans and null
- * dont actually have a tag.
+ * Note that while this is separate from the `VALUE_TAG_`s, the values _with_ tags use
+ * their tags as it provides seamless conversion.
  */
 typedef enum {
-	VALUE_KIND_BOOLEAN,
+	VALUE_KIND_STRING           = VALUE_TAG_STRING,
+	VALUE_KIND_FUNCTION         = VALUE_TAG_FUNCTION,
+	VALUE_KIND_BUILTIN_FUNCTION = VALUE_TAG_BUILTIN_FUNCTION,
+	VALUE_KIND_ARRAY            = VALUE_TAG_ARRAY,
+	VALUE_KIND_NUMBER           = VALUE_TAG_NUMBER,
+	VALUE_KIND_BOOLEAN          = VALUE_TAG_MASK + 1, // guaranteed to not be a tag
 	VALUE_KIND_NULL,
-	VALUE_KIND_STRING,
-	VALUE_KIND_FUNCTION,
-	VALUE_KIND_BUILTIN_FUNCTION,
-	VALUE_KIND_ARRAY,
-	VALUE_KIND_NUMBER,
 } value_kind;
 
 // Returns a string representation of `kind`.
@@ -72,14 +72,7 @@ static inline value_kind classify(value val) {
 	if (val == VTRUE || val == VFALSE)
 		return VALUE_KIND_BOOLEAN;
 
-	switch (val & VALUE_TAG_MASK) {
-	case VALUE_TAG_STRING:           return VALUE_KIND_STRING;
-	case VALUE_TAG_FUNCTION:         return VALUE_KIND_FUNCTION;
-	case VALUE_TAG_BUILTIN_FUNCTION: return VALUE_KIND_BUILTIN_FUNCTION;
-	case VALUE_TAG_ARRAY:            return VALUE_KIND_ARRAY;
-	case VALUE_TAG_NUMBER:           return VALUE_KIND_NUMBER;
-	default: bug("invalid value: %lld (%llx)", val & VALUE_TAG_MASK, val);
-	}
+	return val & VALUE_TAG_MASK;
 }
 
 // Returns a string representation of `val`'s kind.

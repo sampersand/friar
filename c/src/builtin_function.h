@@ -12,10 +12,13 @@ typedef struct {
 #define NUMBER_OF_BUILTIN_FUNCTIONS 10
 extern builtin_function builtin_functions[NUMBER_OF_BUILTIN_FUNCTIONS];
 
+void init_builtin_functions(void);
+
 value call_builtin_function(
-	builtin_function *builtin_func,
+	const builtin_function *builtin,
 	unsigned number_of_arguments,
 	const value *arguments
 );
+
 
 void dump_builtin_function(FILE *out, const builtin_function *builtin);

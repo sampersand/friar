@@ -10,3 +10,4 @@ static inline int compare_numbers(number lhs, number rhs) {
 }
 
 string *number_to_string(number num);
+number string_to_number(const string *str);

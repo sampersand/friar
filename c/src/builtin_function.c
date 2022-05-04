@@ -1,8 +1,18 @@
 #include "builtin_function.h"
 #include "value.h"
+#include <time.h>
+
+void init_builtin_functions(void) {
+	// the `srandom` function provides much better random numbers, but isn't technically standard.
+#ifdef SRANDOM_UNDEFINED
+	srand(time(NULL));
+#else
+	srandom(time(NULL));
+#endif
+}
 
 value call_builtin_function(
-	builtin_function *builtin,
+	const builtin_function *builtin,
 	unsigned number_of_arguments,
 	const value *arguments
 ) {
@@ -19,15 +29,44 @@ void dump_builtin_function(FILE *out, const builtin_function *builtin) {
 }
 
 static value builtin_to_num_fn(const value *arguments) {
-	die("[todo] to num");
-	(void) arguments;
-	return VNULL;
+	if (!is_string(arguments[0]))
+		edie("Can only convert strings to numbers, not %s", value_name(arguments[0]));
+
+	return new_number_value(string_to_number(as_string(arguments[0])));
 }
 
 static value builtin_prompt_fn(const value *arguments) {
-	die("[todo] prompt");
 	(void) arguments;
-	return VNULL;
+
+	size_t capacity = 0;
+	ssize_t length;
+	char *line = NULL;
+
+	// TODO: use fgets instead
+	if ((length = getline(&line, &capacity, stdin)) == -1) {
+		assert(line != NULL);
+		free(line);
+
+		if (!feof(stdin))
+			edie("unable to read line from stdin");
+
+		return new_string_value(new_string(strdup(""), 0));
+	}
+
+	assert(0 < length);
+	assert(line != NULL);
+
+	// strip trialing newlines
+	if (length != 0 && line[length - 1] == '\n') {
+		length--;
+		if (length != 0 && line[length - 1] == '\r')
+			length--;
+	}
+
+	value ret = new_string_value(new_string(strndup(line, length), length));
+	free(line);
+
+	return ret;
 }
 
 static value builtin_print_fn(const value *arguments) {
@@ -47,14 +86,21 @@ static value builtin_print_fn(const value *arguments) {
 
 static value builtin_println_fn(const value *arguments) {
 	builtin_print_fn(arguments);
-	puts("");
+	putchar('\n');
 	return VNULL;
 }
 
 static value builtin_random_fn(const value *arguments) {
 	(void) arguments;
-	die("[todo] random fn");
-	return VNULL;
+	number ret;
+
+#ifdef SRANDOM_UNDEFINED
+	ret = rand();
+#else
+	ret = random();
+#endif
+
+	return new_number_value(ret);
 }
 
 static value builtin_length_fn(const value *arguments) {
@@ -79,7 +125,7 @@ static value builtin_exit_fn(const value *arguments) {
 
 static value builtin_dump_fn(const value *arguments) {
 	dump_value(stdout, arguments[0]);
-	putc('\n', stdout);
+	putchar('\n');
 	return arguments[0];
 }
 
