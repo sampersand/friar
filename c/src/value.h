@@ -35,7 +35,7 @@ XXX...011 = builtin function
 XXX...100 = number
 */
 enum {
-	VALUE_TAG_STRING           = 0, 
+	VALUE_TAG_STRING           = 0,
 	VALUE_TAG_FUNCTION         = 1,
 	VALUE_TAG_ARRAY            = 2,
 	VALUE_TAG_BUILTIN_FUNCTION = 3,
@@ -233,7 +233,7 @@ value modulo_values(value lhs, value rhs);
 // Returns true if `lhs` equals `rhs`.
 bool equate_values(value lhs, value rhs);
 
-// Returns a negative, zero, or positive number depending on if `lhs` is 
+// Returns a negative, zero, or positive number depending on if `lhs` is
 // less than, equal to, or greater than `rhs`.
 int compare_values(value lhs, value rhs);
 

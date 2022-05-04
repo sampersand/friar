@@ -52,7 +52,10 @@ value index_array(const array *ary, int idx) {
 			return VUNDEF;
 	}
 
-	return (unsigned) idx < ary->length ? ary->elements[idx] : VUNDEF;
+	if (ary->length <= (unsigned) idx)
+		return VUNDEF;
+
+	return ary->elements[idx];
 }
 
 void index_assign_array(array *ary, int idx, value val) {
@@ -63,7 +66,6 @@ void index_assign_array(array *ary, int idx, value val) {
 			edie("cannot assign to negative indicies larger than `ary`'s length: %d", idx);
 	}
 
-
 	// Assigning out of bounds just fills it with `null`.
 	while (ary->length <= (unsigned) idx)
 		push_array(ary, VNULL);
@@ -72,16 +74,19 @@ void index_assign_array(array *ary, int idx, value val) {
 }
 
 array *add_arrays(array *lhs, array *rhs) {
-	if (lhs->length == 0) return clone_array(rhs);
-	if (rhs->length == 0) return clone_array(lhs);
+	if (lhs->length == 0)
+		return clone_array(rhs);
+
+	if (rhs->length == 0)
+		return clone_array(lhs);
 
 	array *ret = allocate_array(lhs->length + rhs->length);
 
 	for (unsigned i = 0; i < lhs->length; i++)
-		ret->elements[i] = clone_value	(lhs->elements[i]);
+		ret->elements[i] = clone_value(lhs->elements[i]);
 
 	for (unsigned i = 0; i < rhs->length; i++)
-		ret->elements[i + lhs->length] = clone_value	(rhs->elements[i]);
+		ret->elements[i + lhs->length] = clone_value(rhs->elements[i]);
 
 	ret->length = lhs->length + rhs->length;
 	return ret;

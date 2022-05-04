@@ -112,7 +112,7 @@ static char get_escape_char(tokenizer *tzr) {
 
 		char upper_nibble = peek_advance(tzr);
 		char lower_nibble = peek_advance(tzr);
-		
+
 		return (parse_hex(tzr, upper_nibble) << 4) + parse_hex(tzr, lower_nibble);
 
 	default:

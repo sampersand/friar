@@ -6,7 +6,7 @@ string *new_string2(char *ptr, unsigned length) {
 	assert(strlen(ptr) == length);
 
 	string *str = xmalloc(sizeof(string));
-	
+
 	str->refcount = 1;
 	str->length = length;
 	str->ptr = ptr;

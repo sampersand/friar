@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 
 	free_environment();
 	free_global_variables();
-	
+
 	if (is_number(ret))
 		return as_number(ret);
 }

@@ -217,7 +217,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		case UNARY_OP_NEGATE: set_opcode(builder, OPCODE_NEGATE); break;
 		case UNARY_OP_NOT:    set_opcode(builder, OPCODE_NOT); break;
 		}
-		set_local(builder, target_local); 
+		set_local(builder, target_local);
 		set_local(builder, target_local);
 		break;
 	}
@@ -236,7 +236,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 
 		for (unsigned i = 0; i < primary->array_literal.length; i++)
 			set_local(builder, element_locals[i]);
-	
+
 		set_local(builder, target_local);
 		break;
 	}
@@ -256,7 +256,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		} else {
 			set_opcode(builder, OPCODE_MOVE);
 			set_local(builder, local_index);
-			set_local(builder, target_local);			
+			set_local(builder, target_local);
 		}
 		break;
 	}
