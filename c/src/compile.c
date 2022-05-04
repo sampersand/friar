@@ -11,28 +11,27 @@
 // Since we discard all locals after returning, we can use the return local as scratch.
 #define SCRATCH_LOCAL CODEBLOCK_RETURN_LOCAL
 
-typedef struct {
-	char *name;
-	unsigned local_index;
-} local_variable_entry;
-
-typedef struct {
-	unsigned length, capacity;
-	local_variable_entry *entries;
-} local_variable_map;
-
 // You could do this with the classic `length/capacity` + `realloc` scheme, but
 // it really clutters up the code. And, really, when was the last time you had more
 // than 16 nested whiles...
 #ifndef MAX_NUMBER_OF_NESTED_WHILES
 # define MAX_NUMBER_OF_NESTED_WHILES 16
 #endif
+
 #ifndef MAX_NUMBER_OF_BREAKS_PER_WHILE
 # define MAX_NUMBER_OF_BREAKS_PER_WHILE 64
 #endif
 
 typedef struct {
-	local_variable_map local_variables;
+	char *name;
+	unsigned local_index;
+} local_variable_entry;
+
+typedef struct {
+	struct {
+		unsigned length, capacity;
+		local_variable_entry *entries;
+	} local_variables;
 
 	unsigned number_of_locals;
 
@@ -49,7 +48,7 @@ typedef struct {
 	struct {
 		unsigned length;
 		unsigned start_of_conditions[MAX_NUMBER_OF_NESTED_WHILES];
-		struct each_while_break {
+		struct _each_while_break {
 			unsigned length;
 			unsigned code_positions[MAX_NUMBER_OF_BREAKS_PER_WHILE];
 		} breaks[MAX_NUMBER_OF_NESTED_WHILES];
@@ -80,10 +79,8 @@ static unsigned declare_local_variable(codeblock_builder *builder, char *name) {
 
 	unsigned local_index = next_local_index(builder);
 
-	builder->local_variables.entries[builder->local_variables.length] = (local_variable_entry) {
-		.name = name,
-		.local_index = local_index
-	};
+	builder->local_variables.entries[builder->local_variables.length].name = name;
+	builder->local_variables.entries[builder->local_variables.length].local_index = local_index;
 
 #ifdef ENABLE_LOGGING
 	printf("locals[%d] = %s\n", local_index, name);
@@ -116,28 +113,29 @@ static void set_bytecode(codeblock_builder *builder, bytecode bc) {
 
 static void set_opcode(codeblock_builder *builder, opcode op) {
 	LOG("code[% 3d] = op(%s)", builder->bytecode.length, opcode_repr(op));
-	set_bytecode(builder, (bytecode) { .op = op});
+	set_bytecode(builder, (bytecode) { .op = op });
 }
 
 static void set_count(codeblock_builder *builder, unsigned count) {
 	LOG("code[% 3d] = count(%d)", builder->bytecode.length, count);
-	set_bytecode(builder, (bytecode) { .count = count } );
+	set_bytecode(builder, (bytecode) { .count = count });
 }
 
 static void set_local(codeblock_builder *builder, unsigned local) {
 	LOG("code[% 3d] = local(%d)", builder->bytecode.length, local);
-	set_bytecode(builder, (bytecode) { .count = local } );
+	set_bytecode(builder, (bytecode) { .count = local });
 }
 
+#define DUMMY_COUNT_PLACEHOLDER 0xAABBCCDD
 static unsigned defer_jump(codeblock_builder *builder) {
 	LOG("code[% 3d] = <defered jump>", builder->bytecode.length);
 	unsigned code_position = builder->bytecode.length;
-	set_bytecode(builder, (bytecode) { .count = 0xAABBCCDD } );
+	set_bytecode(builder, (bytecode) { .count = DUMMY_COUNT_PLACEHOLDER });
 	return code_position;
 }
 
 static void set_jump_dst(codeblock_builder *builder, unsigned jmp_src) {
-	assert(builder->bytecode.code[jmp_src].count == 0xAABBCCDD);
+	assert(builder->bytecode.code[jmp_src].count == DUMMY_COUNT_PLACEHOLDER);
 	LOG("code[% 3d] = count(%d) (update)", jmp_src, builder->bytecode.length);
 	builder->bytecode.code[jmp_src].count = builder->bytecode.length;
 }
@@ -211,7 +209,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		break;
 	}
 
-	case AST_PRIMARY_UNARY_OPERATOR: {
+	case AST_PRIMARY_UNARY_OPERATOR:
 		compile_primary(builder, primary->unary_operator.primary, target_local);
 		switch (primary->unary_operator.operator) {
 		case UNARY_OP_NEGATE: set_opcode(builder, OPCODE_NEGATE); break;
@@ -220,7 +218,6 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		set_local(builder, target_local);
 		set_local(builder, target_local);
 		break;
-	}
 
 	case AST_PRIMARY_ARRAY_LITERAL: {
 		unsigned element_locals[primary->array_literal.length];
@@ -244,20 +241,21 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 	case AST_PRIMARY_VARIABLE: {
 		int local_index = lookup_local_variable(builder, primary->variable.name);
 
-		if (local_index == -1) {
-			int global_index = lookup_global_variable(primary->variable.name);
-
-			if (global_index == -1)
-				die("undeclared variable '%s'.", primary->variable.name);
-
-			set_opcode(builder, OPCODE_LOAD_GLOBAL_VARIABLE);
-			set_count(builder, global_index);
-			set_local(builder, target_local);
-		} else {
+		if (local_index != -1) {
 			set_opcode(builder, OPCODE_MOVE);
 			set_local(builder, local_index);
 			set_local(builder, target_local);
+			break;
 		}
+
+		int global_index = lookup_global_variable(primary->variable.name);
+
+		if (global_index == -1)
+			die("undeclared variable '%s'", primary->variable.name);
+
+		set_opcode(builder, OPCODE_LOAD_GLOBAL_VARIABLE);
+		set_count(builder, global_index);
+		set_local(builder, target_local);
 		break;
 	}
 
@@ -265,6 +263,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		load_constant(builder, primary->literal.val, target_local);
 		break;
 	}
+
 	free(primary);
 }
 
@@ -291,22 +290,20 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		compile_expression(builder, expression->assign.value, target_local);
 
 		int local_index = lookup_local_variable(builder, expression->assign.name);
-		if (local_index == -1)
-			goto assign_global;
+		if (local_index != -1) {
+			if (expression->assign.operator != BINARY_OP_UNDEF) {
+				set_opcode(builder, binary_operator_to_opcode(expression->assign.operator));
+				set_local(builder, local_index);
+				set_local(builder, target_local);
+				set_local(builder, target_local);
+			}
 
-		if (expression->assign.operator != BINARY_OP_UNDEF) {
-			set_opcode(builder, binary_operator_to_opcode(expression->assign.operator));
+			set_opcode(builder, OPCODE_MOVE);
+			set_local(builder, target_local);
 			set_local(builder, local_index);
-			set_local(builder, target_local);
-			set_local(builder, target_local);
+			break;
 		}
 
-		set_opcode(builder, OPCODE_MOVE);
-		set_local(builder, target_local);
-		set_local(builder, local_index);
-		break;
-
-	assign_global:;
 		int global_index = lookup_global_variable(expression->assign.name);
 		if (global_index == -1)
 			die("unknown variable '%s'; declare it first.", expression->assign.name);
@@ -469,10 +466,12 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 		if (builder->whiles.length == 0)
 			die("cannot break when not within a while");
 
-		struct each_while_break *breaks = &builder->whiles.breaks[builder->whiles.length - 1];
+		struct _each_while_break *breaks = &builder->whiles.breaks[builder->whiles.length - 1];
 
-		if (breaks->length == MAX_NUMBER_OF_BREAKS_PER_WHILE)
-			die("too many breaks encountered; only %d max allowed per while", MAX_NUMBER_OF_BREAKS_PER_WHILE);
+		if (breaks->length == MAX_NUMBER_OF_BREAKS_PER_WHILE) {
+			die("too many breaks encountered; only %d max allowed per while",
+				MAX_NUMBER_OF_BREAKS_PER_WHILE);
+		}
 
 		set_opcode(builder, OPCODE_JUMP);
 		breaks->code_positions[breaks->length] = defer_jump(builder);
@@ -482,6 +481,7 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 	case AST_STATEMENT_CONTINUE:
 		if (builder->whiles.length == 0)
 			die("cannot continue when not within a while");
+
 		set_opcode(builder, OPCODE_JUMP);
 		set_count(builder, builder->whiles.start_of_conditions[builder->whiles.length - 1]);
 		break;
@@ -534,6 +534,7 @@ static value build_function(
 	builder.whiles.length = 0;
 
 	compile_block(&builder, body);
+
 	// all functions implicitly return `null` at the end.
 	load_constant(&builder, VNULL, CODEBLOCK_RETURN_LOCAL);
 	set_opcode(&builder, OPCODE_RETURN);

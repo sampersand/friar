@@ -184,13 +184,14 @@ static void strip_leading_whitespace_and_comments(tokenizer *tzr) {
 		if (c == '/' && tzr->stream[1] == '/') {
 			while (c != '\0' && c != '\n')
 				c = peek_advance(tzr);
+			continue;
 		}
 
 		break;
 	}
 }
 
-static token parse_optional_equals(tokenizer *tzr, token_kind if_not_equal, token_kind if_equal) {
+static token parse_optional_equals(tokenizer *tzr, token_kind if_equal, token_kind if_not_equal) {
 	if (peek(tzr) != '=') 
 		return (token) { .kind = if_not_equal };
 
