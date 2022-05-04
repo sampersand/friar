@@ -2,17 +2,20 @@ program := {<declaration>} ;
 declaration := <global-declaration> | <function-declaration> ;
 
 global-declaration := 'global' IDENTIFIER ;
-function-declaration := 'function' IDENTIFIER '(' {IDENTIFIER ','} [IDENTIFIER] ')' <block> ;
+function-declaration
+ := 'function' IDENTIFIER '(' {IDENTIFIER ','} [IDENTIFIER] ')' <block> ;
 
 block := '{' {[<statement>] ';'} '}' ;
 statement
- := <return-statement>
+ := <local-statement>
+  | <return-statement>
   | <if-statement>
   | <while-statement>
   | <break-statement>
   | <continue-statement>
   | <expression> ';'
   ;
+local-statement := 'local' IDENTIFIER ['=' <expression>] ';' ;
 return-statement := 'return' [<expression>] ';' ;
 if-statement := 'if' <expression> <block> ['else' <block>] ;
 while-statement := 'while' <expression> <block> ;
@@ -25,9 +28,9 @@ expression
   | <binary-op>
   | <primary>
   ;
-simple-assignment := IDENTIFIER '=' <expression> ;
-index-assignment := <indexing> '=' <expression> ;
-binary-op := <primary> BINARY_OP <expression> ;
+simple-assignment := IDENTIFIER ASSIGNMENT_OP ;
+index-assignment := <indexing> ASSIGNMENT_OP <expression> ;
+binary-op := <primary> BINARY_OP <expression> ; (* note: no order of operations *)
 
 primary
  := <paren-expression>
@@ -44,4 +47,28 @@ function-call := <primary> '(' {<expression> ','} [<expression>] ')' ;
 unary-op := UNARY_OP <primary> ;
 array-literal :=  '[' {<expression> ','} [<expression>] ']' ;
 variable := IDENTIFIER ;
-literal := STRING | INTEGER | 'true' | 'false' | 'null' ;
+literal := STRING | NUMBER | 'true' | 'false' | 'null' ;
+
+IDENTIFIER := (LETTER | '_') { LETTER | DIGIT | '_' }
+NUMBER := DIGIT {DIGIT}
+STRING
+ := ''' { STRING_ESCAPE | (? any non-''' character ?) } '''
+  | '"' { STRING_ESCAPE | (? any non-'"' character ?) } '"' ;
+STRING_ESCAPE := '\\' | '\n' | '\t' | '\f' | '\r' | '\0' | '\x' HEX HEX ;
+HEX
+ := DIGIT
+  | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+  ;
+
+ASSIGNMENT_OP := '=' | '+=' | '-=' |  '*=' | '/=' | '%=' ;
+BINARY_OP := '+' | '-' | '*' | '/' | '<' | '<=' | '>' | '>=' | '==' | '!=' | '&&' | '||' ;
+UNARY_OP := '!' | '-' | '+';
+
+DIGIT := '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' ;
+LETTER
+ := 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm'
+  | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'
+  | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M'
+  | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z'
+  ;
