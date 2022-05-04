@@ -53,35 +53,32 @@ static opcode next_opcode(virtual_machine *vm) {
 static value next_local(virtual_machine *vm) {
 	unsigned count = vm->block->code[vm->instruction_pointer].count;
 	value local = vm->locals[count];
+	assert(local != VALUE_UNDEFINED); // This means we're reading from an unset local.
 
 #ifdef ENABLE_LOGGING
 	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
-	if (local == VALUE_UNDEFINED) {
-		printf("VALUE_UNDEFINED");
-	} else  {
-		dump_value(stdout, local);
-	}
+	dump_value(stdout, local);
 	putchar(')');
 #endif
 
 	vm->instruction_pointer++;
-	return local;
+	return clone_value(local);
 }
 
 static void set_next_local(virtual_machine *vm, value val) {
+	assert(val != VALUE_UNDEFINED);
+
 	unsigned count = vm->block->code[vm->instruction_pointer].count;
 
 #ifdef ENABLE_LOGGING
 	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
-	if (val == VALUE_UNDEFINED) {
-		printf("VALUE_UNDEFINED");
-	} else  {
-		dump_value(stdout, val);
-	}
-	puts("}");
+	dump_value(stdout, val);
+	putchar(')');
 #endif
 
 	vm->instruction_pointer++;
+	if (vm->locals[count] != VALUE_UNDEFINED)
+		free_value(vm->locals[count]);
 	vm->locals[count] = val;
 }
 
@@ -100,7 +97,7 @@ static void run_array_literal(virtual_machine *vm) {
 }
 
 static void run_load_constant(virtual_machine *vm) {
-	value constant = vm->block->constants[next_count(vm)];
+	value constant = clone_value(vm->block->constants[next_count(vm)]);
 
 #ifdef ENABLE_LOGGING
 	LOGN("constant=");
@@ -121,7 +118,7 @@ static void run_store_global_variable(virtual_machine *vm) {
 	unsigned global_index = next_count(vm);
 	value value = next_local(vm);
 
-	assign_global_variable(global_index, value);
+	assign_global_variable(global_index, clone_value(value));
 	set_next_local(vm, value);
 }
 
@@ -154,6 +151,9 @@ static void run_call(virtual_machine *vm) {
 		arguments[i] = next_local(vm);
 
 	set_next_local(vm, call_value(function, arg_count, arguments));
+
+	for (unsigned i = 0; i < arg_count; i++)
+		free_value(arguments[i]);
 }
 
 static void run_return(virtual_machine *vm) {
@@ -164,12 +164,16 @@ static void run_not(virtual_machine *vm) {
 	value arg = next_local(vm);
 
 	set_next_local(vm, not_value(arg));
+
+	free_value(arg);
 }
 
 static void run_negate(virtual_machine *vm) {
 	value arg = next_local(vm);
 
 	set_next_local(vm, negate_value(arg));
+
+	free_value(arg);
 }
 
 static void run_add(virtual_machine *vm) {
@@ -177,6 +181,9 @@ static void run_add(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, add_values(lhs, rhs));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_subtract(virtual_machine *vm) {
@@ -184,6 +191,9 @@ static void run_subtract(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, subtract_values(lhs, rhs));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_multiply(virtual_machine *vm) {
@@ -191,6 +201,9 @@ static void run_multiply(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, multiply_values(lhs, rhs));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_divide(virtual_machine *vm) {
@@ -198,6 +211,9 @@ static void run_divide(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, divide_values(lhs, rhs));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_modulo(virtual_machine *vm) {
@@ -205,6 +221,9 @@ static void run_modulo(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, modulo_values(lhs, rhs));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_equal(virtual_machine *vm) {
@@ -212,6 +231,9 @@ static void run_equal(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, new_boolean_value(equate_values(lhs, rhs)));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_not_equal(virtual_machine *vm) {
@@ -219,6 +241,9 @@ static void run_not_equal(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, new_boolean_value(!equate_values(lhs, rhs)));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_less_than(virtual_machine *vm) {
@@ -226,6 +251,9 @@ static void run_less_than(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs) < 0));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_less_than_or_equal(virtual_machine *vm) {
@@ -233,6 +261,9 @@ static void run_less_than_or_equal(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs) <= 0));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_greater_than(virtual_machine *vm) {
@@ -240,6 +271,9 @@ static void run_greater_than(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs) > 0));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_greater_than_or_equal(virtual_machine *vm) {
@@ -247,6 +281,9 @@ static void run_greater_than_or_equal(virtual_machine *vm) {
 	value rhs = next_local(vm);
 
 	set_next_local(vm, new_boolean_value(compare_values(lhs, rhs) >= 0));
+
+	free_value(lhs);
+	free_value(rhs);
 }
 
 static void run_index(virtual_machine *vm) {
@@ -254,6 +291,9 @@ static void run_index(virtual_machine *vm) {
 	value index = next_local(vm);
 
 	set_next_local(vm, index_value(source, index));
+
+	free_value(source);
+	free_value(index);
 }
 
 static void run_index_assign(virtual_machine *vm) {
@@ -261,8 +301,12 @@ static void run_index_assign(virtual_machine *vm) {
 	value index = next_local(vm);
 	value val = next_local(vm);
 
-	index_assign_value(source, index, val);
+	index_assign_value(source, index, clone_value(val));
 	set_next_local(vm, val);
+
+	free_value(source);
+	free_value(index);
+	// don't free `val` as we used it in `set_next_local`.
 }
 
 static void run_vm(virtual_machine *vm) {

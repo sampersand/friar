@@ -168,7 +168,7 @@ struct ast_declaration {
 	} kind;
 
 	struct {
-		char *filename;
+		const char *filename;
 		unsigned line_number;
 	} source;
 

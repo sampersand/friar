@@ -420,7 +420,7 @@ ast_declaration *next_declaration(tokenizer *tzr) {
 	token tkn = advance(tzr);
 
 	declaration->source.line_number = tzr->line_number;
-	declaration->source.filename = strdup(tzr->filename);
+	declaration->source.filename = tzr->filename;
 
 	switch (tkn.kind) {
 	case TOKEN_KIND_GLOBAL:

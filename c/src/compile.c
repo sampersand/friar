@@ -140,13 +140,13 @@ static void set_jump_dst(codeblock_builder *builder, unsigned jmp_src) {
 	builder->bytecode.code[jmp_src].count = builder->bytecode.length;
 }
 
-static void load_constant(codeblock_builder *builder, value val, unsigned target_local) {
+static void load_constant(codeblock_builder *builder, value constant, unsigned target_local) {
 	unsigned constant_index;
 
 	for (unsigned i = 0; i < builder->constants.length; i++) {
-		if (equate_values(builder->constants.consts[i], val)) {
+		if (equate_values(builder->constants.consts[i], constant)) {
 			constant_index = i;
-			free_value(val);
+			free_value(constant);
 			goto found_constant;
 		}
 	}
@@ -159,7 +159,7 @@ static void load_constant(codeblock_builder *builder, value val, unsigned target
 	}
 
 	constant_index = builder->constants.length;
-	builder->constants.consts[constant_index] = val;
+	builder->constants.consts[constant_index] = constant;
 	builder->constants.length++;
 
 found_constant:
@@ -242,6 +242,8 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 		int local_index = lookup_local_variable(builder, primary->variable.name);
 
 		if (local_index != -1) {
+			free(primary->variable.name);
+
 			set_opcode(builder, OPCODE_MOVE);
 			set_local(builder, local_index);
 			set_local(builder, target_local);
@@ -252,6 +254,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 
 		if (global_index == -1)
 			die("undeclared variable '%s'", primary->variable.name);
+		free(primary->variable.name);
 
 		set_opcode(builder, OPCODE_LOAD_GLOBAL_VARIABLE);
 		set_count(builder, global_index);
@@ -291,6 +294,8 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 
 		int local_index = lookup_local_variable(builder, expression->assign.name);
 		if (local_index != -1) {
+			free(expression->assign.name);
+
 			if (expression->assign.operator != BINARY_OP_UNDEF) {
 				set_opcode(builder, binary_operator_to_opcode(expression->assign.operator));
 				set_local(builder, local_index);
@@ -307,6 +312,8 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		int global_index = lookup_global_variable(expression->assign.name);
 		if (global_index == -1)
 			die("unknown variable '%s'; declare it first.", expression->assign.name);
+
+		free(expression->assign.name);
 
 		if (expression->assign.operator != BINARY_OP_UNDEF) {
 			unsigned old_local_index = next_local_index(builder);
@@ -556,8 +563,8 @@ static value build_function(
 		block,
 		number_of_arguments,
 		argument_names,
-		source_line_number
-		source_filename,
+		source_line_number,
+		source_filename
 	));
 }
 
@@ -565,7 +572,7 @@ static void compile_declaration(ast_declaration *declaration) {
 	switch (declaration->kind) {
 	case AST_DECLARATION_FUNCTION: {
 		// declare it beforehand so recursive functions can reference the defn.
-		unsigned global = declare_global_variable(declaration->function.name);
+		unsigned global = declare_global_variable(strdup(declaration->function.name));
 
 		value function = build_function(
 			declaration->function.name,

@@ -93,7 +93,7 @@ function test_arrays() {
 
 	if true {
 	} else {
-		assert(false, "if")
+		assert(false, "if");
 	}
 }
 

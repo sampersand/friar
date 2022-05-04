@@ -68,6 +68,10 @@ int main(int argc, char **argv) {
 	free_environment();
 	free_global_variables();
 
+	// If the return value of `main` is an integer, that's the return status.
 	if (is_number(ret))
 		return as_number(ret);
+
+	free_value(ret);
+	return 0;
 }

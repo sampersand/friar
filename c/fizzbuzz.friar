@@ -31,6 +31,6 @@ function fizzbuzz2(max) {
 }
 
 function main() {
-//	fizzbuzz1(100);
+	//fizzbuzz1(100);
 	fizzbuzz2(16);
 }

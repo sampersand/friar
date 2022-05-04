@@ -25,8 +25,8 @@ function *new_function(
 	codeblock *body,
 	unsigned number_of_arguments,
 	char **argument_names,
-	unsigned source_line_number
-	const char *source_filename,
+	unsigned source_line_number,
+	const char *source_filename
 );
 
 void deallocate_function(function *func);
