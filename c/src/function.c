@@ -42,7 +42,7 @@ void deallocate_function(function *func) {
 
 value call_function(const function *func, unsigned number_of_arguments, value *argv) {
 	if (func->number_of_arguments != number_of_arguments) {
-		die("argument mismatch for %s: expected %d, got %d",
+		edie("argument mismatch for %s: expected %d, got %d",
 			func->function_name, func->number_of_arguments, number_of_arguments);
 	}
 

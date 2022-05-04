@@ -7,7 +7,7 @@ value call_builtin_function(
 	const value *arguments
 ) {
 	if (builtin_func->required_argument_count != number_of_arguments) {
-		die("argument mismatch, %s expected %d, but got %d",
+		edie("argument mismatch, %s expected %d, but got %d",
 			builtin_func->name, builtin_func->required_argument_count, number_of_arguments);
 	}
 
@@ -66,13 +66,13 @@ static value builtin_length_fn(const value *arguments) {
 		return new_number_value(as_string(arguments[0])->length);
 
 	default:
-		die("can only get the length of arrays and strings, not %s", value_name(arguments[0]));
+		edie("can only get the length of arrays and strings, not %s", value_name(arguments[0]));
 	}
 }
 
 static value builtin_exit_fn(const value *arguments) {
 	if (!is_number(arguments[0]))
-		die("can only exit with an integer status code, not %s", value_name(arguments[0]));
+		edie("can only exit with an integer status code, not %s", value_name(arguments[0]));
 
 	exit(as_number(arguments[0]));
 }
@@ -85,10 +85,10 @@ static value builtin_dump_fn(const value *arguments) {
 
 static value builtin_delete_fn(const value *arguments) {
 	if (!is_array(arguments[0]))
-		die("can only `delete` from arrays, not %s", value_name(arguments[0]));
+		edie("can only `delete` from arrays, not %s", value_name(arguments[0]));
 
 	if (!is_number(arguments[1]))
-		die("index needs to be an integer for `delete`, not %s", value_name(arguments[1]));
+		edie("index needs to be an integer for `delete`, not %s", value_name(arguments[1]));
 
 	value ret = delete_at_array(as_array(arguments[0]), as_number(arguments[1]));
 	return ret == VUNDEF ? VNULL : ret;
@@ -96,10 +96,10 @@ static value builtin_delete_fn(const value *arguments) {
 
 static value builtin_insert_fn(const value *arguments) {
 	if (!is_array(arguments[0]))
-		die("can only `insert` from arrays, not %s", value_name(arguments[0]));
+		edie("can only `insert` from arrays, not %s", value_name(arguments[0]));
 
 	if (!is_number(arguments[1]))
-		die("index needs to be an integer for `insert`, not %s", value_name(arguments[1]));
+		edie("index needs to be an integer for `insert`, not %s", value_name(arguments[1]));
 
 	insert_at_array(as_array(arguments[0]), as_number(arguments[1]), arguments[2]);
 	return arguments[0];

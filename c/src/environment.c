@@ -20,6 +20,8 @@ void free_environment(void) {
 }
 
 void enter_stackframe(const source_code_location *location) {
+	// Note this isn't an `edie`, as that'd dump hundreds of stackframes.
+	// In the future, we may want to only log the first and last few?
 	if (environment.stack_pointer == STACKFRAME_LIMIT)
 		die("stack level too deep (%d levels deep)", STACKFRAME_LIMIT);
 
@@ -36,16 +38,7 @@ void dump_stacktrace(FILE *out) {
 	for (unsigned i = 0; i < environment.stack_pointer; i++) {
 		const source_code_location *location = environment.stackframes[i];
 
-		fprintf(out, "%d: ", i);
-
-		if (location == NULL) {
-			fputs("<unknown>", out);
-		} else {
-			fprintf(out, "%s:%d", location->filename, location->lineno);
-			if (location->function_name != NULL)
-				fprintf(out, " in '%s'", location->function_name);
-		}
-
-		fputc('\n', out);
+		fprintf(out, "%d: %s:%d in %s\n",
+			i, location->filename, location->lineno, location->function_name);
 	}
 }

@@ -199,7 +199,7 @@ string *value_to_string(value val) {
 		return array_to_string(as_array(val));
 
 	default:
-		die("no conversion to string defined for %s", value_name(val));
+		edie("no conversion to string defined for %s", value_name(val));
 	}
 }
 
