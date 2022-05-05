@@ -223,7 +223,7 @@ value subtract_values(value lhs, value rhs) {
 }
 
 value multiply_values(value lhs, value rhs) {
-	if (!is_number(rhs)) 
+	if (!is_number(rhs))
 		edie("can only multiply numbers, strings, and arrays by numbers, not %ss", value_name(rhs));
 
 	number amnt = as_number(rhs);

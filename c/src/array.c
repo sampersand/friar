@@ -158,7 +158,7 @@ array *add_arrays(array *lhs, array *rhs) {
 int compare_arrays(const array *lhs, const array *rhs) {
 	unsigned min = lhs->length < rhs->length ? lhs->length : rhs->length;
 
-	// Check as many elements as possible and return the first discrepancy 
+	// Check as many elements as possible and return the first discrepancy
 	for (unsigned i = 0; i < min; i++) {
 		int cmp = compare_values(lhs->elements[i], rhs->elements[i]);
 
