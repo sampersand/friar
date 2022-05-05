@@ -163,6 +163,7 @@ struct ast_block {
 
 struct ast_declaration {
 	enum {
+		AST_DECLARATION_IMPORT,
 		AST_DECLARATION_GLOBAL,
 		AST_DECLARATION_FUNCTION
 	} kind;
@@ -173,6 +174,10 @@ struct ast_declaration {
 	} source;
 
 	union {
+		struct {
+			char *path;
+		} import;
+
 		struct {
 			char *name;
 		} global;

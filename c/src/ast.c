@@ -431,6 +431,27 @@ ast_declaration *next_declaration(tokenizer *tzr) {
 			parse_error(tzr, "expected `;` after `global` declaration");
 		break;
 
+	case TOKEN_KIND_IMPORT: {
+		declaration->kind = AST_DECLARATION_IMPORT;
+
+		token path_token = advance(tzr);
+		if (path_token.kind != TOKEN_KIND_LITERAL || !is_string(path_token.val))
+			parse_error(tzr, "`import` only takes strings");
+		if (!guard(tzr, TOKEN_KIND_SEMICOLON))
+			parse_error(tzr, "expected `;` after `import` declaration");
+
+
+		// `read_file` expects a nul terminated string, but `string`s are not nul terminated.
+		// So we have to make one.
+		string *path_string = as_string(path_token.val);
+		char *path = new_cstr_from_string(path_string);
+		free_string(path_string);
+
+		if (path == NULL)
+			parse_error(tzr, "import paths must not contain `\\0`");
+		break;
+	}
+
 	case TOKEN_KIND_FUNCTION:
 		declaration->kind = AST_DECLARATION_FUNCTION;
 		declaration->function.name = expect_identifier(tzr, "function name");
@@ -661,6 +682,10 @@ void dump_ast_declaration(FILE *out, const ast_declaration *declaration) {
 	switch (declaration->kind) {
 	case AST_DECLARATION_GLOBAL:
 		fprintf(out, "global %s;\n", declaration->global.name);
+		break;
+	case AST_DECLARATION_IMPORT:
+		// this won't escape special characters, but eh, it's debug code, so whatever.
+		fprintf(out, "import \"%s\";\n", declaration->import.path);
 		break;
 	case AST_DECLARATION_FUNCTION:
 		fprintf(out, "function %s(", declaration->function.name);

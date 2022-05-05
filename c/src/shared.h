@@ -9,6 +9,7 @@
 
 void *xmalloc(size_t size);
 void *xrealloc(void *ptr, size_t size);
+char *read_file(const char *filename);
 
 #ifdef ENABLE_LOGGING
 # define LOG(...) (LOGN(__VA_ARGS__), puts(""))

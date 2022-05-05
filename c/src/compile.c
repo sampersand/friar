@@ -590,6 +590,14 @@ static void compile_declaration(ast_declaration *declaration) {
 		break;
 	}
 
+	case AST_DECLARATION_IMPORT: {
+		// read the file contents
+		char *contents = read_file(declaration->import.path);
+		compile(declaration->import.path, contents);
+		break;
+	}
+
+
 	case AST_DECLARATION_GLOBAL:
 		declare_global_variable(declaration->global.name);
 		break;

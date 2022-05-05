@@ -74,6 +74,7 @@ static token parse_identifier(tokenizer *tzr) {
 	if (!strncmp(start, "true", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_TRUE };
 	if (!strncmp(start, "false", 5)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_FALSE };
 	if (!strncmp(start, "null", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_NULL };
+	if (!strncmp(start, "import", 6)) return (token) { .kind = TOKEN_KIND_IMPORT };
 	if (!strncmp(start, "global", 6)) return (token) { .kind = TOKEN_KIND_GLOBAL };
 	if (!strncmp(start, "function", 8)) return (token) { .kind = TOKEN_KIND_FUNCTION };
 	if (!strncmp(start, "local", 5)) return (token) { .kind = TOKEN_KIND_LOCAL };
@@ -259,6 +260,7 @@ void dump_token(FILE *out, token tkn) {
 	case TOKEN_KIND_LITERAL: dump_value(out, tkn.val); break;
 	case TOKEN_KIND_IDENTIFIER: fprintf(out, "Identifier(%s)\n", tkn.identifier); break;
 
+	case TOKEN_KIND_IMPORT: fputs("Keyword(import)", out); break;
 	case TOKEN_KIND_GLOBAL: fputs("Keyword(global)", out); break;
 	case TOKEN_KIND_FUNCTION: fputs("Keyword(function)", out); break;
 	case TOKEN_KIND_LOCAL: fputs("Keyword(local)", out); break;

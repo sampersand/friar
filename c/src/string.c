@@ -85,3 +85,16 @@ string *replicate_string(string *str, unsigned amnt) {
 
 	return ret;
 }
+
+char *new_cstr_from_string(const string *str) {
+	for (unsigned i = 0; i < str->length; i++) {
+		if (str->ptr[i] == '\0')
+			return NULL;
+	}
+
+	char *cstr = xmalloc(str->length + 1);
+	memcpy(cstr, str->ptr, str->length);
+	cstr[str->length] = '\0';
+	return cstr;
+}
+

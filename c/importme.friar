@@ -1,0 +1,4 @@
+function greet(whom) {
+	println("Hello, " + whom);
+	1 / 0; // Just to see if stacktraces are working properly.
+}
