@@ -6,7 +6,7 @@
 #include "shared.h"
 #include "valuedefn.h"
 
-// Note that strings in friar are not nul terminated, and as such aren't compatible with any of the
+// Note that strings are not nul terminated, and as such aren't compatible with any of the
 // builtin `strxxx` family of functions (eg `strdup`).
 typedef struct {
 	VALUE_ALIGNMENT char *ptr;

@@ -177,7 +177,7 @@ static void strip_leading_whitespace_and_comments(tokenizer *tzr) {
 			continue;
 		}
 
-		// briar only has line comments
+		// only c-style line comments are recognized
 		if (c == '/' && tzr->stream[1] == '/') {
 			while (c != '\0' && c != '\n')
 				c = peek_advance(tzr);

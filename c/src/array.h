@@ -7,7 +7,7 @@
 #include "string.h"
 #include <stdio.h>
 
-// The array type within friar.
+// The array type within.
 typedef struct {
 	VALUE_ALIGNMENT value *elements;
 	unsigned refcount, length, capacity;
