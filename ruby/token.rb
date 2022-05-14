@@ -1,17 +1,10 @@
-# typed: true
 # frozen_string_literal: true
-require 'sorbet-runtime'
-
 require_relative 'value'
 
 module Friar
   class ParseError < RuntimeError
-    extend T::Sig
-
-    sig{ returns(SourceLocation) }
     attr_reader :location
 
-    sig{ params(location: SourceLocation, message: String).void }
     def initialize(location, message)
       super "#{location}: #{message}"
       @location = location
@@ -19,30 +12,20 @@ module Friar
   end
 
   class Token
-    extend T::Sig
-
-    sig{ returns(T.any(String, Value)) }
     attr_reader :value
-
-    sig{ returns(Symbol) }
     attr_reader :kind
-
-    sig{ returns(SourceLocation) }
     attr_reader :location
 
-    sig{ params(value: T.any(String, Value), kind: Symbol, location: SourceLocation).void }
     def initialize(value, kind, location)
       @value = value
       @kind = kind
       @location = location
     end
 
-    sig{ returns(String) }
     def inspect = "Token(#{@value.inspect}, #@kind)"
 
     alias to_s inspect
 
-    sig{ params(clause: T.any(String, Symbol)).returns(T::Boolean) }
     def match?(clause)
       case clause
       when String then @kind == :symbol && @value == clause

@@ -1,4 +1,3 @@
-# typed: false
 require_relative 'token'
 
 module Friar
