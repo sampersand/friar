@@ -1,10 +1,17 @@
+# typed: true
 # frozen_string_literal: true
+require 'sorbet-runtime'
+
 require_relative 'value'
 
 module Friar
   class ParseError < RuntimeError
+    extend T::Sig
+
+    sig{ returns(SourceLocation) }
     attr_reader :location
 
+    sig{ params(location: SourceLocation, message: String).void }
     def initialize(location, message)
       super "#{location}: #{message}"
       @location = location
@@ -12,23 +19,34 @@ module Friar
   end
 
   class Token
-    attr_reader :value, :kind, :location
+    extend T::Sig
 
+    sig{ returns(T.any(String, Value)) }
+    attr_reader :value
+
+    sig{ returns(Symbol) }
+    attr_reader :kind
+
+    sig{ returns(SourceLocation) }
+    attr_reader :location
+
+    sig{ params(value: T.any(String, Value), kind: Symbol, location: SourceLocation).void }
     def initialize(value, kind, location)
       @value = value
       @kind = kind
       @location = location
     end
 
+    sig{ returns(String) }
     def inspect = "Token(#{@value.inspect}, #@kind)"
 
     alias to_s inspect
 
+    sig{ params(clause: T.any(String, Symbol)).returns(T::Boolean) }
     def match?(clause)
       case clause
       when String then @kind == :symbol && @value == clause
       when Symbol then @kind == clause
-      else raise ArgumentError, "invalid clausee: #{clause.inspect}"
       end
     end
   end
@@ -93,7 +111,7 @@ module Friar
           location.error "invalid suffix after integer literal"
         end
 
-        Token.new Value::Int.new(int), :value, start
+        Token.new Int.new(int), :value, start
 
       # Single quoted strings are just their literal contents.
       when "'"
@@ -103,7 +121,7 @@ module Friar
           start.error "unterminated single quote encountered"
         end
 
-        Token.new Value::Str.new(text), :value, start
+        Token.new Str.new(text), :value, start
 
       # Double quoted strings interpolate their contents somewhat
       when '"'
@@ -116,15 +134,15 @@ module Friar
 
         # todo interpolation
 
-        Token.new Value::Str.new(text), :string, start
+        Token.new Str.new(text), :string, start
 
       # identifiers
       when /\w/
         word = take_while_regex /\w/
         case word
-        when 'true'    then Token.new Value::Bool.new(true), :value, start
-        when 'false'   then Token.new Value::Bool.new(false), :value, start
-        when 'null'    then Token.new Value::Null.new, :value, start
+        when 'true'    then Token.new Bool.new(true), :value, start
+        when 'false'   then Token.new Bool.new(false), :value, start
+        when 'null'    then Token.new Null.new, :value, start
         when *KEYWORDS then Token.new word, :symbol, start
         else                Token.new word, :identifier, start
         end
@@ -150,7 +168,7 @@ module Friar
     end
 
     def advance
-      chr = @source.shift or error "`.advance` when at EOF"
+      chr = @source.shift or location.error "`.advance` when at EOF"
 
       if chr == "\n"
         @line += 1

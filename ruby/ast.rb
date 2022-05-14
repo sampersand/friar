@@ -1,3 +1,4 @@
+# typed: false
 module Friar
   module Ast
     module Atom
