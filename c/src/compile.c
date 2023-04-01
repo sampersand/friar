@@ -4,7 +4,7 @@
 #include "shared.h"
 #include "function.h"
 #include "value.h"
-#include "ast.h"
+#include "parser/ast.h"
 #include "globals.h"
 #include <stdlib.h>
 #include <string.h>

@@ -1,4 +1,4 @@
-#include "token.h"
+#include "parser/token.h"
 #include "shared.h"
 #include "value.h"
 
