@@ -1,6 +1,6 @@
 #include "parser/token.h"
 #include "shared.h"
-#include "value.h"
+#include "value/value.h"
 
 #include <ctype.h>
 #include <string.h>

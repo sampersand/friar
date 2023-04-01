@@ -3,8 +3,8 @@
 #include <assert.h>
 #include <stdbool.h>
 #include "shared.h"
-#include "valuedefn.h"
-#include "string_.h"
+#include "value/defn.h"
+#include "value/string_.h"
 #include <stdio.h>
 
 /** The array type within Friar.

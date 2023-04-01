@@ -1,7 +1,7 @@
 #pragma once
 
-#include "valuedefn.h"
-#include "token.h"
+#include "value/defn.h"
+#include "parser/token.h"
 
 typedef struct ast_expression ast_expression;
 typedef struct ast_primary ast_primary;

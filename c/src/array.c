@@ -1,8 +1,8 @@
 #include <assert.h>
 
-#include "array.h"
+#include "value/array.h"
 #include "shared.h"
-#include "value.h"
+#include "value/value.h"
 
 array *new_array(value *elements, unsigned length, unsigned capacity) {
 	assert(length <= capacity);

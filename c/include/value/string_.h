@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include "shared.h"
-#include "valuedefn.h"
+#include "value/defn.h"
 
 // Note that strings are not nul terminated, and as such aren't compatible with any of the
 // builtin `strxxx` family of functions (eg `strdup`).

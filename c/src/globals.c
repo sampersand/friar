@@ -1,6 +1,6 @@
 #include "globals.h"
 #include "shared.h"
-#include "value.h"
+#include "value/value.h"
 #include "builtin_function.h"
 
 typedef struct {

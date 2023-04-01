@@ -1,7 +1,7 @@
 #include "codeblock.h"
 #include "globals.h"
 #include "shared.h"
-#include "value.h"
+#include "value/value.h"
 
 codeblock *new_codeblock(
 	unsigned number_of_locals,

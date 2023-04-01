@@ -1,7 +1,7 @@
 #pragma once
 
 #include "bytecode.h"
-#include "valuedefn.h"
+#include "value/defn.h"
 
 #define CODEBLOCK_RETURN_LOCAL 0
 

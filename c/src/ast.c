@@ -1,6 +1,6 @@
 #include "parser/ast.h"
 #include "parser/token.h"
-#include "value.h"
+#include "value/value.h"
 #include <stdlib.h>
 #include <assert.h>
 

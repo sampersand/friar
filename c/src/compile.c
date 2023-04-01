@@ -3,7 +3,7 @@
 #include "codeblock.h"
 #include "shared.h"
 #include "function.h"
-#include "value.h"
+#include "value/value.h"
 #include "parser/ast.h"
 #include "globals.h"
 #include <stdlib.h>

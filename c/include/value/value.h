@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "valuedefn.h"
+#include "value/defn.h"
 #include "shared.h"
-#include "string_.h"
-#include "array.h"
-#include "number.h"
+#include "value/string_.h"
+#include "value/array.h"
+#include "value/number.h"
 #include "function.h"
 #include "builtin_function.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <assert.h>
-#include "valuedefn.h"
+#include "value/defn.h"
 #include "codeblock.h"
 #include <stdalign.h>
 #include <stdio.h>

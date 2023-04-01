@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "value.h"
+#include "value/value.h"
 
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {
