@@ -58,7 +58,7 @@ static value next_local(virtual_machine *vm) {
 #ifdef ENABLE_LOGGING
 	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
 	dump_value(stdout, local);
-	putchar(')');
+	putchar('}');
 #endif
 
 	vm->instruction_pointer++;
@@ -73,7 +73,7 @@ static void set_next_local(virtual_machine *vm, value val) {
 #ifdef ENABLE_LOGGING
 	LOGN("vm[% 3d] = local(%d) {", vm->instruction_pointer, count);
 	dump_value(stdout, val);
-	putchar(')');
+	putchar('}');
 #endif
 
 	vm->instruction_pointer++;
@@ -347,13 +347,13 @@ static void run_vm(virtual_machine *vm) {
 }
 
 value run_codeblock(const codeblock *block, unsigned number_of_arguments, const value *arguments) {
-	virtual_machine vm;
-
-	vm.block = block;
-	vm.instruction_pointer = 0;
-
 	value locals[block->number_of_locals];
-	vm.locals = locals;
+
+	virtual_machine vm = {
+		.block = block,
+		.instruction_pointer = 0,
+		.locals = locals
+	};
 
 	for (unsigned i = 0; i < block->number_of_locals; i++)
 		vm.locals[i] = VALUE_UNDEFINED;

@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 typedef struct {
-	VALUE_ALIGNMENT char *name;
+	VALUE_ALIGNMENT const char *name;
 	unsigned required_argument_count;
 	value (*function_pointer)(const value *arguments);
 } builtin_function;

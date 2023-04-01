@@ -92,23 +92,24 @@ value call_value(value val, unsigned number_of_locals, const value *argument) {
 		return call_builtin_function(as_builtin_function(val), number_of_locals, argument);
 
 	default:
-		edie("cannot call a value of kind %s", value_name(val));
+		die_with_stacktrace("cannot call a value of kind %s", value_name(val));
 	}
 }
 
 void index_assign_value(value ary, value idx, value val) {
 	if (!is_array(ary))
-		edie("can only index assign into arrays, not %s", value_name(ary));
+		die_with_stacktrace("can only index assign into arrays, not %s", value_name(ary));
 
 	if (!is_number(idx))
-		edie("you must index with numbers, not %s", value_name(idx));
+		die_with_stacktrace("you must index with numbers, not %s", value_name(idx));
 
-	index_assign_array(as_array(ary), as_number(idx), val);
+	if (!index_assign_array(as_array(ary), as_number(idx), val))
+		die_with_stacktrace("cannot assign to negative indices larger than `ary`'s length: %d", as_number(idx));
 }
 
 value index_value(value val, value idx) {
 	if (!is_number(idx))
-		edie("you must index with numbers, not %s", value_name(idx));
+		die_with_stacktrace("you must index with numbers, not %s", value_name(idx));
 
 	number num_idx = as_number(idx);
 
@@ -117,7 +118,7 @@ value index_value(value val, value idx) {
 		string *str = index_string(as_string(val), num_idx);
 
 		if (str == NULL)
-			edie("index %lld out of bounds for string of length %u", num_idx, as_string(val)->length);
+			die_with_stacktrace("index %lld out of bounds for string of length %u", num_idx, as_string(val)->length);
 
 		return new_string_value(str);
 	}
@@ -126,26 +127,26 @@ value index_value(value val, value idx) {
 		value ret = index_array(as_array(val), num_idx);
 
 		if (ret == VALUE_UNDEFINED)
-			edie("index %lld out of bounds for array of length %u", num_idx, as_array(val)->length);
+			die_with_stacktrace("index %lld out of bounds for array of length %u", num_idx, as_array(val)->length);
 
 		return ret;
 	}
 
 	default:
-		edie("can only index into arrays or strings, not %s", value_name(idx));
+		die_with_stacktrace("can only index into arrays or strings, not %s", value_name(idx));
 	}
 }
 
 value negate_value(value val) {
 	if (!is_number(val))
-		edie("can only negate numbers, not %s", value_name(val));
+		die_with_stacktrace("can only negate numbers, not %s", value_name(val));
 
 	return new_number_value(-as_number(val));
 }
 
 value not_value(value val) {
 	if (!is_boolean(val))
-		edie("can only not booleans, not %s", value_name(val));
+		die_with_stacktrace("can only not booleans, not %s", value_name(val));
 
 	return new_boolean_value(!as_boolean(val));
 }
@@ -173,7 +174,7 @@ string *value_to_string(value val) {
 		return array_to_string(as_array(val));
 
 	default:
-		edie("no conversion to string defined for %s", value_name(val));
+		die_with_stacktrace("no conversion to string defined for %s", value_name(val));
 	}
 }
 
@@ -183,7 +184,7 @@ value add_values(value lhs, value rhs) {
 		goto string;
 
 	if (classify(lhs) != classify(rhs)) {
-		edie("can only add like kinds together, or strings to other types, not %s to %s",
+		die_with_stacktrace("can only add like kinds together, or strings to other types, not %s to %s",
 			value_name(lhs), value_name(rhs));
 	}
 
@@ -192,7 +193,7 @@ value add_values(value lhs, value rhs) {
 		return new_number_value(as_number(lhs) + as_number(rhs));
 
 	case VALUE_KIND_ARRAY:
-		return new_array_value(add_arrays(as_array(lhs), as_array(rhs)));
+		return new_array_value(concat_arrays(as_array(lhs), as_array(rhs)));
 
 	case VALUE_KIND_STRING:
 	string: {
@@ -208,14 +209,14 @@ value add_values(value lhs, value rhs) {
 	}
 
 	default:
-		edie("can only add numbers, arrays, and strings, not %s", value_name(lhs));
+		die_with_stacktrace("can only add numbers, arrays, and strings, not %s", value_name(lhs));
 	}
 }
 
 value subtract_values(value lhs, value rhs) {
 	// Yes its backwards intentionally; English is weird.
 	if (!is_number(lhs) || !is_number(rhs)) {
-		edie("can only subtract numbers from numbers, not %s from %s",
+		die_with_stacktrace("can only subtract numbers from numbers, not %s from %s",
 			value_name(rhs), value_name(lhs));
 	}
 
@@ -224,7 +225,7 @@ value subtract_values(value lhs, value rhs) {
 
 value multiply_values(value lhs, value rhs) {
 	if (!is_number(rhs))
-		edie("can only multiply numbers, strings, and arrays by numbers, not %ss", value_name(rhs));
+		die_with_stacktrace("can only multiply numbers, strings, and arrays by numbers, not %ss", value_name(rhs));
 
 	number amnt = as_number(rhs);
 
@@ -234,44 +235,44 @@ value multiply_values(value lhs, value rhs) {
 
 	case VALUE_KIND_STRING:
 		if (amnt < 0)
-			edie("can only multiply strings by nonnegative integers (%lld invalid).", amnt);
+			die_with_stacktrace("can only multiply strings by nonnegative integers (%lld invalid).", amnt);
 
 		return new_string_value(replicate_string(as_string(lhs), amnt));
 
 	case VALUE_KIND_ARRAY:
 		if (amnt < 0)
-			edie("can only multiply arrays by nonnegative integers (%lld invalid).", amnt);
+			die_with_stacktrace("can only multiply arrays by nonnegative integers (%lld invalid).", amnt);
 
 		return new_array_value(replicate_array(as_array(lhs), amnt));
 
 	default:
-		edie("can only multiply numbers, strings, and arrays, not %s.", value_name(lhs));
+		die_with_stacktrace("can only multiply numbers, strings, and arrays, not %s.", value_name(lhs));
 	}
 }
 
 value divide_values(value lhs, value rhs) {
 	if (!is_number(lhs) || !is_number(rhs))
-		edie("can only divide numbers by numbers, not %s from %s", value_name(lhs), value_name(rhs));
+		die_with_stacktrace("can only divide numbers by numbers, not %s from %s", value_name(lhs), value_name(rhs));
 
 	if (as_number(rhs) == 0)
-		edie("division by zero!");
+		die_with_stacktrace("division by zero!");
 
 	return new_number_value(as_number(lhs) / as_number(rhs));
 }
 
 value modulo_values(value lhs, value rhs) {
 	if (!is_number(lhs) || !is_number(rhs))
-		edie("can only modulo numbers by numbers, not %s from %s", value_name(lhs), value_name(rhs));
+		die_with_stacktrace("can only modulo numbers by numbers, not %s from %s", value_name(lhs), value_name(rhs));
 
 	if (as_number(rhs) == 0)
-		edie("modulo by zero!");
+		die_with_stacktrace("modulo by zero!");
 
 	return new_number_value(as_number(lhs) % as_number(rhs));
 }
 
 int compare_values(value lhs, value rhs) {
 	if (classify(lhs) != classify(rhs))
-		edie("can only compare like kinds together, not %s to %s", value_name(lhs), value_name(rhs));
+		die_with_stacktrace("can only compare like kinds together, not %s to %s", value_name(lhs), value_name(rhs));
 
 	switch (classify(lhs)) {
 	case VALUE_KIND_NUMBER:
@@ -284,7 +285,7 @@ int compare_values(value lhs, value rhs) {
 		return compare_strings(as_string(lhs), as_string(rhs));
 
 	default:
-		edie("can only compare numbers, arrays, and strings, not %s", value_name(lhs));
+		die_with_stacktrace("can only compare numbers, arrays, and strings, not %s", value_name(lhs));
 	}
 }
 
@@ -311,4 +312,8 @@ bool equate_values(value lhs, value rhs) {
 	case VALUE_KIND_ARRAY:
 		return equate_arrays(as_array(lhs), as_array(rhs));
 	}
+}
+
+string *inspect_value(value val) {
+	return is_string(val) ? inspect_string(as_string(val)) : value_to_string(val);
 }

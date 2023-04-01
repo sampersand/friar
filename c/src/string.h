@@ -42,3 +42,5 @@ string *replicate_string(string *str, unsigned amnt);
 
 // returns `NULL` if `str` contains a null byte.
 char *new_cstr_from_string(const string *str);
+
+string *inspect_string(const string *str);

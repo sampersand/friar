@@ -1,0 +1,13 @@
+import "parse.friar";
+// import "variable.friar";
+// import "functions.friar";
+// import "value.friar";
+
+function main() {
+//	init_functions();
+	//init_variables();
+
+	//set stream = argv[1];
+	//run(parse());
+}
+

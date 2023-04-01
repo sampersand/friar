@@ -41,8 +41,12 @@ void deallocate_function(function *func) {
 
 value call_function(const function *func, unsigned number_of_arguments, const value *arguments) {
 	if (func->number_of_arguments != number_of_arguments) {
-		edie("argument mismatch for %s: expected %d, got %d",
-			func->function_name, func->number_of_arguments, number_of_arguments);
+		die_with_stacktrace(
+			"argument mismatch for %s: expected %d, got %d",
+			func->function_name,
+			func->number_of_arguments,
+			number_of_arguments
+		);
 	}
 
 	source_code_location location = {

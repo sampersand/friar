@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#define edie(...) (\
+#define die_with_stacktrace(...) (\
 	fprintf(stderr, __VA_ARGS__), \
 	fputs("\nstacktrace:\n", stderr), \
 	dump_stacktrace(stderr), \

@@ -18,7 +18,7 @@ void free_environment(void) {
 }
 
 void enter_stackframe(const source_code_location *location) {
-	// Note this isn't an `edie`, as that'd dump hundreds of stackframes.
+	// Note this isn't an `die`, as that'd dump hundreds of stackframes.
 	// In the future, we may want to only log the first and last few?
 	if (environment.stack_pointer == STACKFRAME_LIMIT)
 		die("stack level too deep (%d levels deep)", STACKFRAME_LIMIT);

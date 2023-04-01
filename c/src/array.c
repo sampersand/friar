@@ -5,6 +5,7 @@
 #include "value.h"
 
 array *new_array(value *elements, unsigned length, unsigned capacity) {
+	assert(length <= capacity);
 	array *ary = xmalloc(sizeof(array));
 
 	ary->refcount = 1;
@@ -49,10 +50,11 @@ value pop_array(array *ary) {
 
 	value ret = ary->elements[ary->length];
 	ary->length--;
-	return ret;
+	return ret; // No need to clone, as we now own it.
 }
 
 value index_array(const array *ary, int idx) {
+	// Allow for negative indexing.
 	if (idx < 0) {
 		idx += ary->length;
 
@@ -60,18 +62,19 @@ value index_array(const array *ary, int idx) {
 			return VALUE_UNDEFINED;
 	}
 
+	// If it's out of bounds, return undefined.
 	if (ary->length <= (unsigned) idx)
 		return VALUE_UNDEFINED;
 
-	return clone_value(ary->elements[idx]);
+	return clone_value(ary->elements[idx]); // Clone it as we still have ownership of the original.
 }
 
-void index_assign_array(array *ary, int idx, value val) {
+bool index_assign_array(array *ary, int idx, value val) {
 	if (idx < 0) {
 		idx += ary->length;
 
 		if (idx < 0)
-			edie("cannot assign to negative indicies larger than `ary`'s length: %d", idx);
+			return false;
 	}
 
 	// Assigning out of bounds just fills it with `null`.
@@ -80,6 +83,8 @@ void index_assign_array(array *ary, int idx, value val) {
 
 	free_value(ary->elements[idx]);
 	ary->elements[idx] = val;
+
+	return true;
 }
 
 value delete_at_array(array *ary, int idx) {
@@ -106,18 +111,18 @@ value delete_at_array(array *ary, int idx) {
 	return deleted;
 }
 
-void insert_at_array(array *ary, int idx, value val) {
+bool insert_at_array(array *ary, int idx, value val) {
 	if (idx < 0) {
 		idx += ary->length;
 
 		if (idx < 0)
-			edie("cannot insert to negative indicies larger than `ary`'s length: %d", idx);
+			return false;
 	}
 
 	// Insertion out of bounds is identical to index assigning out of bounds.
 	if (ary->length <= (unsigned) idx) {
 		index_assign_array(ary, idx, val);
-		return;
+		return true;
 	}
 
 	reallocate_if_necessary(ary);
@@ -128,16 +133,11 @@ void insert_at_array(array *ary, int idx, value val) {
 
 	ary->elements[idx] = val;
 	ary->length++;
+	return true;
 }
 
-
-array *add_arrays(array *lhs, array *rhs) {
-	if (lhs->length == 0)
-		return clone_array(rhs);
-
-	if (rhs->length == 0)
-		return clone_array(lhs);
-
+// Note that even though these arguments aren't const pointers, we still dont own them.
+array *concat_arrays(const array *lhs, const array *rhs) {
 	array *ret = allocate_array(lhs->length + rhs->length);
 
 	// Note that we don't use `push_array`, as that has to check capacity every time, and we know
@@ -156,10 +156,10 @@ array *add_arrays(array *lhs, array *rhs) {
 }
 
 int compare_arrays(const array *lhs, const array *rhs) {
-	unsigned min = lhs->length < rhs->length ? lhs->length : rhs->length;
+	unsigned min_length = lhs->length < rhs->length ? lhs->length : rhs->length;
 
 	// Check as many elements as possible and return the first discrepancy
-	for (unsigned i = 0; i < min; i++) {
+	for (unsigned i = 0; i < min_length; i++) {
 		int cmp = compare_values(lhs->elements[i], rhs->elements[i]);
 
 		if (cmp != 0)
@@ -170,6 +170,8 @@ int compare_arrays(const array *lhs, const array *rhs) {
 	return compare_numbers(lhs->length, rhs->length);
 }
 
+// While we could just call `compare_arrays` and check to see if the return value is zero,
+// this function is more optimized.
 bool equate_arrays(const array *lhs, const array *rhs) {
 	if (lhs->length != rhs->length)
 		return false;
@@ -207,13 +209,12 @@ string *array_to_string(const array *ary) {
 	char *str = xmalloc(capacity);
 	str[0] = '[';
 
-	// NOTE: this doesn't handle strings well, as `["1, 2", 3]` is converted to `"[1, 2, 3]"`. Fixing
-	// that requires a separate function to escape strings, which I didn't end up making.
 	for (unsigned i = 0; i < ary->length; i++) {
-		string *element_string = value_to_string(ary->elements[i]);
+		string *inspected_string = inspect_value(ary->elements[i]);
 
-		if (capacity <= length + element_string->length + 2) {
-			capacity = (length + element_string->length + 2) * 2;
+		// the `+ 2` is for the `, ` we add.
+		if (capacity <= length + inspected_string->length + 2) {
+			capacity = (length + inspected_string->length + 2) * 2;
 			str = xrealloc(str, capacity);
 		}
 
@@ -224,9 +225,9 @@ string *array_to_string(const array *ary) {
 			length += 2;
 		}
 
-		memcpy(str + length, element_string->ptr, element_string->length);
-		length += element_string->length;
-		free_string(element_string);
+		memcpy(str + length, inspected_string->ptr, inspected_string->length);
+		length += inspected_string->length;
+		free_string(inspected_string);
 	}
 
 	// Allocate space for the trailing `]`

@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define parse_error(...) die(__VA_ARGS__)
+
 // Since we discard all locals after returning, we can use the return local as scratch.
 #define SCRATCH_LOCAL CODEBLOCK_RETURN_LOCAL
 
@@ -48,6 +50,7 @@ typedef struct {
 	struct {
 		unsigned length;
 		unsigned start_of_conditions[MAX_NUMBER_OF_NESTED_WHILES];
+
 		struct _each_while_break {
 			unsigned length;
 			unsigned code_positions[MAX_NUMBER_OF_BREAKS_PER_WHILE];
@@ -62,12 +65,16 @@ static unsigned next_local_index(codeblock_builder *builder) {
 }
 
 static unsigned declare_local_variable(codeblock_builder *builder, char *name) {
+	// Check to see if the variable's been used before
 	for (unsigned i = 0; i < builder->local_variables.length; i++) {
 		if (!strcmp(builder->local_variables.entries[i].name, name)) {
 			free(name);
+			// It has, return that index.
 			return builder->local_variables.entries[i].local_index;
 		}
 	}
+
+	// We haven't seen the variable before, let's add it.
 
 	if (builder->local_variables.length == builder->local_variables.capacity) {
 		builder->local_variables.capacity *= 2;
@@ -82,29 +89,30 @@ static unsigned declare_local_variable(codeblock_builder *builder, char *name) {
 	builder->local_variables.entries[builder->local_variables.length].name = name;
 	builder->local_variables.entries[builder->local_variables.length].local_index = local_index;
 
-#ifdef ENABLE_LOGGING
-	printf("locals[%d] = %s\n", local_index, name);
-#endif
+	LOG("locals[%d] = %s\n", local_index, name);
 
 	builder->local_variables.length++;
 	return local_index;
 }
 
-// returns `-1` if it doesnt exist
+#define VARIABLE_DOESNT_EXIST (-1)
+
 static int lookup_local_variable(codeblock_builder *builder, const char *name) {
 	for (unsigned i = 0; i < builder->local_variables.length; i++) {
 		if (!strcmp(builder->local_variables.entries[i].name, name))
 			return builder->local_variables.entries[i].local_index;
 	}
 
-	return -1;
+	return VARIABLE_DOESNT_EXIST;
 }
 
 static void set_bytecode(codeblock_builder *builder, bytecode bc) {
 	if (builder->bytecode.length == builder->bytecode.capacity) {
 		builder->bytecode.capacity *= 2;
-		builder->bytecode.code =
-			xrealloc(builder->bytecode.code, builder->bytecode.capacity * sizeof(bytecode));
+		builder->bytecode.code = xrealloc(
+			builder->bytecode.code,
+			builder->bytecode.capacity * sizeof(bytecode)
+		);
 	}
 
 	builder->bytecode.code[builder->bytecode.length] = bc;
@@ -143,6 +151,7 @@ static void set_jump_dst(codeblock_builder *builder, unsigned jmp_src) {
 static void load_constant(codeblock_builder *builder, value constant, unsigned target_local) {
 	unsigned constant_index;
 
+	// If the constant already exists, then we don't need to store it again.
 	for (unsigned i = 0; i < builder->constants.length; i++) {
 		if (equate_values(builder->constants.consts[i], constant)) {
 			constant_index = i;
@@ -154,8 +163,10 @@ static void load_constant(codeblock_builder *builder, value constant, unsigned t
 	// We didn't find it, we need to allocate it.
 	if (builder->constants.length == builder->constants.capacity) {
 		builder->constants.capacity *= 2;
-		builder->constants.consts =
-			xrealloc(builder->constants.consts, builder->constants.capacity * sizeof(value));
+		builder->constants.consts = xrealloc(
+			builder->constants.consts,
+			builder->constants.capacity * sizeof(value)
+		);
 	}
 
 	constant_index = builder->constants.length;
@@ -212,8 +223,13 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 	case AST_PRIMARY_UNARY_OPERATOR:
 		compile_primary(builder, primary->unary_operator.primary, target_local);
 		switch (primary->unary_operator.operator) {
-		case UNARY_OP_NEGATE: set_opcode(builder, OPCODE_NEGATE); break;
-		case UNARY_OP_NOT:    set_opcode(builder, OPCODE_NOT); break;
+		case UNARY_OP_NEGATE:
+			set_opcode(builder, OPCODE_NEGATE); 
+			break;
+
+		case UNARY_OP_NOT:
+			set_opcode(builder, OPCODE_NOT); 
+			break;
 		}
 		set_local(builder, target_local);
 		set_local(builder, target_local);
@@ -241,7 +257,7 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 	case AST_PRIMARY_VARIABLE: {
 		int local_index = lookup_local_variable(builder, primary->variable.name);
 
-		if (local_index != -1) {
+		if (local_index != VARIABLE_DOESNT_EXIST) {
 			free(primary->variable.name);
 
 			set_opcode(builder, OPCODE_MOVE);
@@ -252,8 +268,8 @@ static void compile_primary(codeblock_builder *builder, ast_primary *primary, un
 
 		int global_index = lookup_global_variable(primary->variable.name);
 
-		if (global_index == -1)
-			die("undeclared variable '%s'", primary->variable.name);
+		if (global_index == GLOBAL_DOESNT_EXIST)
+			parse_error("undeclared variable '%s'", primary->variable.name);
 		free(primary->variable.name);
 
 		set_opcode(builder, OPCODE_LOAD_GLOBAL_VARIABLE);
@@ -293,7 +309,7 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		compile_expression(builder, expression->assign.value, target_local);
 
 		int local_index = lookup_local_variable(builder, expression->assign.name);
-		if (local_index != -1) {
+		if (local_index != VARIABLE_DOESNT_EXIST) {
 			free(expression->assign.name);
 
 			if (expression->assign.operator != BINARY_OP_UNDEF) {
@@ -310,8 +326,9 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		}
 
 		int global_index = lookup_global_variable(expression->assign.name);
-		if (global_index == -1)
-			die("unknown variable '%s'; declare it first.", expression->assign.name);
+		if (global_index == GLOBAL_DOESNT_EXIST) {
+			parse_error("unknown variable '%s'; declare it first.", expression->assign.name);
+		}
 
 		free(expression->assign.name);
 
@@ -367,8 +384,13 @@ static void compile_expression(codeblock_builder *builder, ast_expression *expre
 		compile_primary(builder, expression->binary_operator.lhs, target_local);
 
 		switch (expression->short_circuit_operator.operator) {
-		case SHORT_CIRCUIT_OR_OR:   set_opcode(builder, OPCODE_JUMP_IF_TRUE); break;
-		case SHORT_CIRCUIT_AND_AND: set_opcode(builder, OPCODE_JUMP_IF_FALSE); break;
+		case SHORT_CIRCUIT_OR_OR:
+			set_opcode(builder, OPCODE_JUMP_IF_TRUE);
+			break;
+
+		case SHORT_CIRCUIT_AND_AND:
+			set_opcode(builder, OPCODE_JUMP_IF_FALSE);
+			break;
 		}
 
 		set_local(builder, target_local);
@@ -404,10 +426,10 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 	case AST_STATEMENT_LOCAL: {
 		unsigned new_local = declare_local_variable(builder, statement->local.name);
 
-		if (statement->local.initializer != NULL) {
-			compile_expression(builder, statement->local.initializer, new_local);
-		} else {
+		if (statement->local.initializer == NULL) {
 			load_constant(builder, VALUE_NULL, new_local);
+		} else {
+			compile_expression(builder, statement->local.initializer, new_local);
 		}
 
 		break;
@@ -420,8 +442,8 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 			compile_expression(builder, statement->return_.expression, CODEBLOCK_RETURN_LOCAL);
 		}
 
+		// the `return` opcode takes no arguments, as it returns the `SCRATCH_LOCAL` argument
 		set_opcode(builder, OPCODE_RETURN);
-		// `return` takes no arguments, as it returns the `SCRATCH_LOCAL` argument
 		break;
 
 	case AST_STATEMENT_IF:
@@ -445,7 +467,7 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 		}
 		break;
 
-	case AST_STATEMENT_WHILE:;
+	case AST_STATEMENT_WHILE: {
 		unsigned beginning_of_condition = builder->bytecode.length;
 		compile_expression(builder, statement->while_.condition, SCRATCH_LOCAL);
 		set_opcode(builder, OPCODE_JUMP_IF_FALSE);
@@ -453,7 +475,7 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 		unsigned jump_to_while_end = defer_jump(builder);
 
 		if (builder->whiles.length == MAX_NUMBER_OF_NESTED_WHILES)
-			die("too many nested whiles encountered; only %d max allowed", MAX_NUMBER_OF_NESTED_WHILES);
+			parse_error("too many nested whiles encountered; only %d max allowed", MAX_NUMBER_OF_NESTED_WHILES);
 
 		builder->whiles.start_of_conditions[builder->whiles.length] = beginning_of_condition;
 		builder->whiles.breaks[builder->whiles.length].length = 0;
@@ -467,17 +489,21 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 		builder->whiles.length--;
 		for (unsigned i = 0; i < builder->whiles.breaks[builder->whiles.length].length; i++)
 			set_jump_dst(builder, builder->whiles.breaks[builder->whiles.length].code_positions[i]);
+
 		break;
+	}
 
 	case AST_STATEMENT_BREAK:
 		if (builder->whiles.length == 0)
-			die("cannot break when not within a while");
+			parse_error("cannot break when not within a while");
 
 		struct _each_while_break *breaks = &builder->whiles.breaks[builder->whiles.length - 1];
 
 		if (breaks->length == MAX_NUMBER_OF_BREAKS_PER_WHILE) {
-			die("too many breaks encountered; only %d max allowed per while",
-				MAX_NUMBER_OF_BREAKS_PER_WHILE);
+			parse_error(
+				"too many breaks encountered; only %d max allowed per while",
+				MAX_NUMBER_OF_BREAKS_PER_WHILE
+			);
 		}
 
 		set_opcode(builder, OPCODE_JUMP);
@@ -487,7 +513,7 @@ static void compile_statement(codeblock_builder *builder, ast_statement *stateme
 
 	case AST_STATEMENT_CONTINUE:
 		if (builder->whiles.length == 0)
-			die("cannot continue when not within a while");
+			parse_error("cannot continue when not within a while");
 
 		set_opcode(builder, OPCODE_JUMP);
 		set_count(builder, builder->whiles.start_of_conditions[builder->whiles.length - 1]);
@@ -509,7 +535,7 @@ static void compile_block(codeblock_builder *builder, ast_block *block) {
 	free(block);
 }
 
-static value build_function(
+static function *build_function(
 	char *function_name,
 	unsigned number_of_arguments,
 	char **argument_names,
@@ -521,8 +547,9 @@ static value build_function(
 
 	builder.local_variables.length = 0;
 	builder.local_variables.capacity = 4;
-	builder.local_variables.entries =
-		xmalloc(builder.local_variables.capacity * sizeof(local_variable_entry));
+	builder.local_variables.entries = xmalloc(
+		builder.local_variables.capacity * sizeof(local_variable_entry)
+	);
 
 	builder.number_of_locals = 1; // As we have an initial `CODEBLOCK_RETURN_LOCAL`.
 
@@ -558,14 +585,14 @@ static value build_function(
 		builder.constants.consts
 	);
 
-	return new_function_value(new_function(
+	return new_function(
 		function_name,
 		block,
 		number_of_arguments,
 		argument_names,
 		source_line_number,
 		source_filename
-	));
+	);
 }
 
 static void compile_declaration(ast_declaration *declaration) {
@@ -574,17 +601,17 @@ static void compile_declaration(ast_declaration *declaration) {
 		// declare it beforehand so recursive functions can reference the defn.
 		unsigned global = declare_global_variable(strdup(declaration->function.name));
 
-		value function = build_function(
+		value function = new_function_value(build_function(
 			declaration->function.name,
 			declaration->function.number_of_arguments,
 			declaration->function.argument_names,
 			declaration->function.body,
 			declaration->source.filename,
 			declaration->source.line_number
-		);
+		));
 
 		if (fetch_global_variable(global) != VALUE_NULL)
-			die("function %s redefined", declaration->function.name);
+			parse_error("function %s redefined", declaration->function.name);
 
 		assign_global_variable(global, function);
 		break;

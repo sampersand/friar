@@ -71,19 +71,25 @@ static token parse_identifier(tokenizer *tzr) {
 	unsigned length = tzr->stream - start;
 
 	// check for predefined identifiers
-	if (!strncmp(start, "true", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_TRUE };
-	if (!strncmp(start, "false", 5)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_FALSE };
-	if (!strncmp(start, "null", 4)) return (token) { .kind = TOKEN_KIND_LITERAL, .val = VALUE_NULL };
-	if (!strncmp(start, "import", 6)) return (token) { .kind = TOKEN_KIND_IMPORT };
-	if (!strncmp(start, "global", 6)) return (token) { .kind = TOKEN_KIND_GLOBAL };
-	if (!strncmp(start, "function", 8)) return (token) { .kind = TOKEN_KIND_FUNCTION };
-	if (!strncmp(start, "local", 5)) return (token) { .kind = TOKEN_KIND_LOCAL };
-	if (!strncmp(start, "if", 2)) return (token) { .kind = TOKEN_KIND_IF };
-	if (!strncmp(start, "else", 4)) return (token) { .kind = TOKEN_KIND_ELSE };
-	if (!strncmp(start, "while", 5)) return (token) { .kind = TOKEN_KIND_WHILE };
-	if (!strncmp(start, "break", 5)) return (token) { .kind = TOKEN_KIND_BREAK };
-	if (!strncmp(start, "continue", 8)) return (token) { .kind = TOKEN_KIND_CONTINUE };
-	if (!strncmp(start, "return", 6)) return (token) { .kind = TOKEN_KIND_RETURN };
+#define CHECK_FOR_KEYWORD(keyword, ...) \
+	do { \
+		if (!strncmp(start, keyword, sizeof(keyword))) { \
+			return (token) { .kind = __VA_ARGS__ }; \
+		} \
+	} while(0)
+	CHECK_FOR_KEYWORD("true", TOKEN_KIND_LITERAL, .val = VALUE_TRUE);
+	CHECK_FOR_KEYWORD("false", TOKEN_KIND_LITERAL, .val = VALUE_FALSE);
+	CHECK_FOR_KEYWORD("null", TOKEN_KIND_LITERAL, .val = VALUE_NULL);
+	CHECK_FOR_KEYWORD("global", TOKEN_KIND_GLOBAL);
+	CHECK_FOR_KEYWORD("function", TOKEN_KIND_FUNCTION);
+	CHECK_FOR_KEYWORD("local", TOKEN_KIND_LOCAL);
+	CHECK_FOR_KEYWORD("if", TOKEN_KIND_IF);
+	CHECK_FOR_KEYWORD("else", TOKEN_KIND_ELSE);
+	CHECK_FOR_KEYWORD("while", TOKEN_KIND_WHILE);
+	CHECK_FOR_KEYWORD("break", TOKEN_KIND_BREAK);
+	CHECK_FOR_KEYWORD("continue", TOKEN_KIND_CONTINUE);
+	CHECK_FOR_KEYWORD("return", TOKEN_KIND_RETURN);
+#undef CHECK_FOR_KEYWORD
 
 	// it's a normal identifier, return that.
 	return (token) {
@@ -169,9 +175,9 @@ static void strip_leading_whitespace_and_comments(tokenizer *tzr) {
 	while (true) {
 		char c = peek(tzr);
 
-		// EOF encountered, nothign left to strip
+		// EOF encountered, nothin gleft to strip
 		if (c == '\0')
-			break;
+			return;
 
 		if (isspace(c)) {
 			advance(tzr);
@@ -185,7 +191,7 @@ static void strip_leading_whitespace_and_comments(tokenizer *tzr) {
 			continue;
 		}
 
-		break;
+		return;
 	}
 }
 

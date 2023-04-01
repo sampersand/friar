@@ -41,12 +41,12 @@ int lookup_global_variable(const char *name) {
 			return i;
 	}
 
-	return -1;
+	return GLOBAL_DOESNT_EXIST;
 }
 
 unsigned declare_global_variable(char *name) {
 	int previous_index = lookup_global_variable(name);
-	if (previous_index != -1)
+	if (previous_index != GLOBAL_DOESNT_EXIST)
 		return previous_index;
 
 	if (globals.length == globals.capacity) {

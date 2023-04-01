@@ -201,6 +201,9 @@ value clone_value(value val);
 // Converts `val` to a string.
 string *value_to_string(value val);
 
+// Gets a debugging representation of `val`.
+string *inspect_value(value val);
+
 // Calls `val` with the given arguments.
 value call_value(value val, unsigned number_of_arguments, const value *arguments);
 

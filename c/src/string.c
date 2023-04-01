@@ -1,6 +1,7 @@
 #include "string.h"
 #include "shared.h"
 #include <assert.h>
+#include <ctype.h>
 
 string *new_string(char *ptr, unsigned length) {
 	string *str = xmalloc(sizeof(string));
@@ -98,3 +99,53 @@ char *new_cstr_from_string(const string *str) {
 	return cstr;
 }
 
+static void push_string(string *str, unsigned *capacity, char chr) {
+	if (*capacity <= str->length) {
+		*capacity *= 2;
+		str->ptr = xrealloc(str->ptr, *capacity);
+	}
+
+	str->ptr[str->length] = chr;
+	str->length++;
+}
+
+string *inspect_string(const string *str) {
+	string *inspected = allocate_string(str->length + 2); // the 2 is for the quotes
+	unsigned capacity = str->length + 2;
+
+	push_string(inspected, &capacity, '"');
+
+	for (unsigned i = 0; i < str->length; ++i) {
+		char chr = str->ptr[i];
+
+		switch (chr) {
+		case '\n': chr = 'n'; goto slash;
+		case '\t': chr = 't'; goto slash;
+		case '\r': chr = 'r'; goto slash;
+		case '\0': chr = '0'; goto slash;
+		case '\f': chr = 'f'; goto slash;
+		case '\\':
+		case '\"':
+		case '\'':
+		slash:
+			push_string(inspected, &capacity, '\\');
+			break;
+
+		default:
+			if (isprint(chr))
+				break;
+
+			push_string(inspected, &capacity, '\\');
+			push_string(inspected, &capacity, 'x');
+			push_string(inspected, &capacity, '0' + (chr >> 4));
+			push_string(inspected, &capacity, '0' + (chr & 0xf));
+			continue;
+		}
+
+		push_string(inspected, &capacity, chr);
+	}
+
+	push_string(inspected, &capacity, '"');
+
+	return inspected;
+}

@@ -17,7 +17,7 @@ value call_builtin_function(
 	const value *arguments
 ) {
 	if (builtin_func->required_argument_count != number_of_arguments) {
-		edie("argument mismatch, %s expected %d, but got %d",
+		die_with_stacktrace("argument mismatch, %s expected %d, but got %d",
 			builtin_func->name, builtin_func->required_argument_count, number_of_arguments);
 	}
 
@@ -30,7 +30,7 @@ void dump_builtin_function(FILE *out, const builtin_function *builtin_func) {
 
 static value builtin_to_num_fn(const value *arguments) {
 	if (!is_string(arguments[0]))
-		edie("Can only convert strings to numbers, not %s", value_name(arguments[0]));
+		die_with_stacktrace("Can only convert strings to numbers, not %s", value_name(arguments[0]));
 
 	return new_number_value(string_to_number(as_string(arguments[0])));
 }
@@ -48,7 +48,7 @@ static value builtin_prompt_fn(const value *arguments) {
 		free(line);
 
 		if (!feof(stdin))
-			edie("unable to read line from stdin");
+			die_with_stacktrace("unable to read line from stdin");
 
 		return new_string_value(new_string(strdup(""), 0));
 	}
@@ -109,13 +109,13 @@ static value builtin_length_fn(const value *arguments) {
 		return new_number_value(as_string(arguments[0])->length);
 
 	default:
-		edie("can only get the length of arrays and strings, not %s", value_name(arguments[0]));
+		die_with_stacktrace("can only get the length of arrays and strings, not %s", value_name(arguments[0]));
 	}
 }
 
 static value builtin_exit_fn(const value *arguments) {
 	if (!is_number(arguments[0]))
-		edie("can only exit with an integer status code, not %s", value_name(arguments[0]));
+		die_with_stacktrace("can only exit with an integer status code, not %s", value_name(arguments[0]));
 
 	exit(as_number(arguments[0]));
 }
@@ -129,10 +129,10 @@ static value builtin_dump_fn(const value *arguments) {
 
 static value builtin_delete_fn(const value *arguments) {
 	if (!is_array(arguments[0]))
-		edie("can only `delete` from arrays, not %s", value_name(arguments[0]));
+		die_with_stacktrace("can only `delete` from arrays, not %s", value_name(arguments[0]));
 
 	if (!is_number(arguments[1]))
-		edie("index needs to be an integer for `delete`, not %s", value_name(arguments[1]));
+		die_with_stacktrace("index needs to be an integer for `delete`, not %s", value_name(arguments[1]));
 
 	value ret = delete_at_array(as_array(arguments[0]), as_number(arguments[1]));
 	return ret == VALUE_UNDEFINED ? VALUE_NULL : ret;
@@ -140,12 +140,14 @@ static value builtin_delete_fn(const value *arguments) {
 
 static value builtin_insert_fn(const value *arguments) {
 	if (!is_array(arguments[0]))
-		edie("can only `insert` from arrays, not %s", value_name(arguments[0]));
+		die_with_stacktrace("can only `insert` from arrays, not %s", value_name(arguments[0]));
 
 	if (!is_number(arguments[1]))
-		edie("index needs to be an integer for `insert`, not %s", value_name(arguments[1]));
+		die_with_stacktrace("index needs to be an integer for `insert`, not %s", value_name(arguments[1]));
 
-	insert_at_array(as_array(arguments[0]), as_number(arguments[1]), clone_value(arguments[2]));
+	if (!insert_at_array(as_array(arguments[0]), as_number(arguments[1]), clone_value(arguments[2]))) {
+		die_with_stacktrace("cannot insert to negative indicies larger than `ary`'s length: %lld", as_number(arguments[0]));
+	}
 
 	return clone_value(arguments[0]);
 }
@@ -156,61 +158,24 @@ static value builtin_typeof_fn(const value *arguments) {
 	return new_string_value(new_string(strdup(typename), strlen(typename)));
 }
 
+#define BUILTIN_FN(name_, argc, fn) \
+	(builtin_function) { \
+		.name = name_, \
+		.required_argument_count = argc, \
+		.function_pointer = fn \
+	}
+
 builtin_function builtin_functions[] = {
-	{
-		.name = "to_num",
-		.required_argument_count = 1,
-		.function_pointer = builtin_to_num_fn
-	},
-	{
-		.name = "prompt",
-		.required_argument_count = 0,
-		.function_pointer = builtin_prompt_fn
-	},
-	{
-		.name = "print",
-		.required_argument_count = 1,
-		.function_pointer = builtin_print_fn
-	},
-	{
-		.name = "println",
-		.required_argument_count = 1,
-		.function_pointer = builtin_println_fn
-	},
-	{
-		.name = "random",
-		.required_argument_count = 0,
-		.function_pointer = builtin_random_fn
-	},
-	{
-		.name = "length",
-		.required_argument_count = 1,
-		.function_pointer = builtin_length_fn
-	},
-	{
-		.name = "exit",
-		.required_argument_count = 1,
-		.function_pointer = builtin_exit_fn
-	},
-	{
-		.name = "dump",
-		.required_argument_count = 1,
-		.function_pointer = builtin_dump_fn
-	},
-	{
-		.name = "delete",
-		.required_argument_count = 2,
-		.function_pointer = builtin_delete_fn
-	},
-	{
-		.name = "insert",
-		.required_argument_count = 3,
-		.function_pointer = builtin_insert_fn
-	},
-	{
-		.name = "typeof",
-		.required_argument_count = 1,
-		.function_pointer = builtin_typeof_fn
-	},
+	BUILTIN_FN("to_num", 1, builtin_to_num_fn),
+	BUILTIN_FN("prompt", 0, builtin_prompt_fn),
+	BUILTIN_FN("print", 1, builtin_print_fn),
+	BUILTIN_FN("println", 1, builtin_println_fn),
+	BUILTIN_FN("random", 0, builtin_random_fn),
+	BUILTIN_FN("length", 1, builtin_length_fn),
+	BUILTIN_FN("exit", 1, builtin_exit_fn),
+	BUILTIN_FN("dump", 1, builtin_dump_fn),
+	BUILTIN_FN("delete", 2, builtin_delete_fn),
+	BUILTIN_FN("insert", 3, builtin_insert_fn),
+	BUILTIN_FN("typeof", 1, builtin_typeof_fn),
 };
 

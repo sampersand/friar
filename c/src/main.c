@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
 	init_global_variables();
 	init_builtin_functions();
 
-	if (argc != 3 || argv[1][0] != '-' || argv[1][2] != '\0')
+	if (argc != 3 || argv[1][0] != '-' || argv[1][1] == '\0' || argv[1][2] != '\0')
 		usage(argv[0]);
 
 	switch (argv[1][1]) {
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 	}
 
 	int main_index = lookup_global_variable("main");
-	if (main_index == -1)
+	if (main_index == GLOBAL_DOESNT_EXIST)
 		die("you must define a `main` function");
 
 	value ret = call_value(fetch_global_variable(main_index), 0, NULL);
