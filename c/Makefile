@@ -3,7 +3,7 @@ ifdef DEBUG
 else
 	CFLAGS+=-O3 -flto -DNDEBUG
 endif
-CFLAGS += -Wall -Wpedantic -Wextra
+CFLAGS += -Wall -Wpedantic -Wextra -Iinclude
 
 all: main
 
