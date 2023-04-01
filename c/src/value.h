@@ -11,7 +11,6 @@
 #include "number.h"
 #include "function.h"
 #include "builtin_function.h"
-#include "ast.h"
 
 #define VALUE_FALSE 0
 #define VALUE_NULL 1

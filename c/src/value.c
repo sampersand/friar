@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "value.h"
-#include "ast.h"
 
 void dump_value(FILE *out, value val) {
 	switch (classify(val)) {
@@ -104,7 +103,7 @@ void index_assign_value(value ary, value idx, value val) {
 		die_with_stacktrace("you must index with numbers, not %s", value_name(idx));
 
 	if (!index_assign_array(as_array(ary), as_number(idx), val))
-		die_with_stacktrace("cannot assign to negative indices larger than `ary`'s length: %d", as_number(idx));
+		die_with_stacktrace("cannot assign to negative indices larger than `ary`'s length: %lld", as_number(idx));
 }
 
 value index_value(value val, value idx) {

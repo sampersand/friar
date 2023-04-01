@@ -1,4 +1,3 @@
-#include "token.h"
 #include "value.h"
 #include "compile.h"
 #include "codeblock.h"

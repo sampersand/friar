@@ -1,0 +1,26 @@
+function main() {
+    local sum = 0;
+    local num = 20000;
+    local end = num;
+
+    local i = 0;
+    while i < end {
+        local j = 1;
+        while j < num {
+            if (num % j) == 0 {
+                sum += j;
+            }
+
+            j += 1;
+        }
+
+        if num == sum {
+            println(sum);
+        }
+
+        sum = 0;
+        num -= 1;
+        i += 1;
+
+    }
+}

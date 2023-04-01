@@ -1,4 +1,5 @@
 #include "number.h"
+#include <string.h>
 #include <ctype.h>
 
 string *number_to_string(number num) {

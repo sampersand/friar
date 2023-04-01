@@ -73,7 +73,7 @@ static token parse_identifier(tokenizer *tzr) {
 	// check for predefined identifiers
 #define CHECK_FOR_KEYWORD(keyword, ...) \
 	do { \
-		if (!strncmp(start, keyword, sizeof(keyword))) { \
+		if (!strncmp(start, keyword, sizeof(keyword) - 1)) { \
 			return (token) { .kind = __VA_ARGS__ }; \
 		} \
 	} while(0)
