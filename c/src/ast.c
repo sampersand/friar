@@ -344,6 +344,28 @@ static ast_statement *parse_statement(tokenizer *tzr) {
 			parse_error(tzr, "expected body for `while`");
 		break;
 
+	case TOKEN_KIND_FOR:
+		statement->kind = AST_STATEMENT_FOR;
+		statement->for_.initializer = parse_statement(tzr);
+		if (statement->for_.initializer == NULL)
+			parse_error(tzr, "expected initializer for `for`");
+
+		statement->for_.condition = parse_expression(tzr);
+		if (statement->for_.condition == NULL)
+			parse_error(tzr, "expected condition for `for`");
+
+		if (!guard(tzr, TOKEN_KIND_SEMICOLON))
+			parse_error(tzr, "expected `;` after `condition`");
+
+		statement->for_.updator = parse_expression(tzr);
+		if (statement->for_.updator == NULL)
+			parse_error(tzr, "expected updator clause for `for`");
+
+		statement->for_.body = parse_block(tzr);
+		if (statement->for_.body == NULL)
+			parse_error(tzr, "expected body for `for`");
+		break;
+
 	case TOKEN_KIND_IF:
 		statement->kind = AST_STATEMENT_IF;
 		statement->if_.condition = parse_expression(tzr);
@@ -647,6 +669,16 @@ void dump_ast_statement(FILE *out, const ast_statement *statement, unsigned inde
 		dump_ast_expression(out, statement->while_.condition);
 		fputc(' ', out);
 		dump_ast_block(out, statement->while_.body, indent + 1);
+		break;
+
+	case AST_STATEMENT_FOR:
+		fputs("for ", out);
+		dump_ast_statement(out, statement->for_.initializer, indent);
+		dump_ast_expression(out, statement->for_.condition);
+		fputs("; ", out);
+		dump_ast_expression(out, statement->for_.updator);
+		fputc(' ', out);
+		dump_ast_block(out, statement->for_.body, indent + 1);
 		break;
 
 	case AST_STATEMENT_BREAK:

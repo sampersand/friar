@@ -86,6 +86,7 @@ static token parse_identifier(tokenizer *tzr) {
 	CHECK_FOR_KEYWORD("if", TOKEN_KIND_IF);
 	CHECK_FOR_KEYWORD("else", TOKEN_KIND_ELSE);
 	CHECK_FOR_KEYWORD("while", TOKEN_KIND_WHILE);
+	CHECK_FOR_KEYWORD("for", TOKEN_KIND_FOR);
 	CHECK_FOR_KEYWORD("break", TOKEN_KIND_BREAK);
 	CHECK_FOR_KEYWORD("continue", TOKEN_KIND_CONTINUE);
 	CHECK_FOR_KEYWORD("return", TOKEN_KIND_RETURN);
@@ -273,6 +274,7 @@ void dump_token(FILE *out, token tkn) {
 	case TOKEN_KIND_IF: fputs("Keyword(if)", out); break;
 	case TOKEN_KIND_ELSE: fputs("Keyword(else)", out); break;
 	case TOKEN_KIND_WHILE: fputs("Keyword(while)", out); break;
+	case TOKEN_KIND_FOR: fputs("Keyword(for)", out); break;
 	case TOKEN_KIND_BREAK: fputs("Keyword(break)", out); break;
 	case TOKEN_KIND_CONTINUE: fputs("Keyword(continue)", out); break;
 	case TOKEN_KIND_RETURN: fputs("Keyword(return)", out); break;
