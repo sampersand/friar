@@ -1,5 +1,5 @@
 #pragma once
-#include "string.h"
+#include "string_.h"
 
 typedef long long number;
 

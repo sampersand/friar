@@ -1,4 +1,5 @@
 #pragma once
+// this is named `string_.h` instead of `string.h`, as `string.h` would conflict with the stdlib.
 
 #include <string.h>
 #include <assert.h>

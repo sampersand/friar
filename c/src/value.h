@@ -6,7 +6,7 @@
 
 #include "valuedefn.h"
 #include "shared.h"
-#include "string.h"
+#include "string_.h"
 #include "array.h"
 #include "number.h"
 #include "function.h"
