@@ -56,8 +56,8 @@ static token parse_number(tokenizer *tzr) {
 		parse_error(tzr, "bad character '%c' after integer literal", c);
 
 	return (token) {
-		.kind = TOKEN_KIND_LITERAL,
-		.val = new_number_value(num)
+		.kind = TOKEN_KIND_NUMBER,
+		.num = num
 	};
 }
 
@@ -71,15 +71,15 @@ static token parse_identifier(tokenizer *tzr) {
 	unsigned length = tzr->stream - start;
 
 	// check for predefined identifiers
-#define CHECK_FOR_KEYWORD(keyword, ...) \
+#define CHECK_FOR_KEYWORD(keyword, kind_) \
 	do { \
 		if (!strncmp(start, keyword, sizeof(keyword) - 1)) { \
-			return (token) { .kind = __VA_ARGS__ }; \
+			return (token) { .kind = kind_ }; \
 		} \
 	} while(0)
-	CHECK_FOR_KEYWORD("true", TOKEN_KIND_LITERAL, .val = VALUE_TRUE);
-	CHECK_FOR_KEYWORD("false", TOKEN_KIND_LITERAL, .val = VALUE_FALSE);
-	CHECK_FOR_KEYWORD("null", TOKEN_KIND_LITERAL, .val = VALUE_NULL);
+	CHECK_FOR_KEYWORD("true", TOKEN_KIND_TRUE);
+	CHECK_FOR_KEYWORD("false", TOKEN_KIND_FALSE);
+	CHECK_FOR_KEYWORD("null", TOKEN_KIND_NULL);
 	CHECK_FOR_KEYWORD("global", TOKEN_KIND_GLOBAL);
 	CHECK_FOR_KEYWORD("function", TOKEN_KIND_FUNCTION);
 	CHECK_FOR_KEYWORD("local", TOKEN_KIND_LOCAL);
@@ -167,8 +167,8 @@ static token parse_string(tokenizer *tzr) {
 	}
 
 	return (token) {
-		.kind = TOKEN_KIND_LITERAL,
-		.val = new_string_value(new_string(str, length))
+		.kind = TOKEN_KIND_STRING,
+		.str = new_string(str, length)
 	};
 }
 
@@ -264,8 +264,12 @@ void dump_token(FILE *out, token tkn) {
 	switch(tkn.kind) {
 	case TOKEN_KIND_UNDEFINED: fputs("UNDEF", out); break;
 
-	case TOKEN_KIND_LITERAL: dump_value(out, tkn.val); break;
-	case TOKEN_KIND_IDENTIFIER: fprintf(out, "Identifier(%s)\n", tkn.identifier); break;
+	case TOKEN_KIND_TRUE: fputs("Literal(true)", out); break;
+	case TOKEN_KIND_FALSE: fputs("Literal(false)", out); break;
+	case TOKEN_KIND_NULL: fputs("Literal(null)", out); break;
+	case TOKEN_KIND_NUMBER: fprintf(out, "Number(%"NUMBER_PR")", tkn.num); break;
+	case TOKEN_KIND_STRING: fprintf(out, "String(%*s)", tkn.str->length, tkn.str->ptr); break;
+	case TOKEN_KIND_IDENTIFIER: fprintf(out, "Identifier(%s)", tkn.identifier); break;
 
 	case TOKEN_KIND_IMPORT: fputs("Keyword(import)", out); break;
 	case TOKEN_KIND_GLOBAL: fputs("Keyword(global)", out); break;

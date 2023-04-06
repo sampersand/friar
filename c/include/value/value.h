@@ -10,7 +10,7 @@
 #include "value/array.h"
 #include "value/number.h"
 #include "value/function.h"
-#include "vm/builtin_function.h"
+#include "value/builtin_function.h"
 
 #define VALUE_FALSE 0
 #define VALUE_NULL 1

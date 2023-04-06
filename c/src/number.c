@@ -9,7 +9,7 @@ string *number_to_string(number num) {
 	char buf[255];
 
 	// We use `snprintf` just in case `long long`s aren't 64 bits for some reason
-	snprintf(buf, sizeof(buf), "%lld", num);
+	snprintf(buf, sizeof(buf), "%"NUMBER_PR, num);
 
 	return new_string(strdup(buf), strlen(buf));
 }

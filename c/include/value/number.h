@@ -1,7 +1,8 @@
 #pragma once
 #include "value/string_.h"
 
-typedef long long number;
+#define NUMBER_PR "lld"
+typedef long long int number;
 
 // `compare_numbers` returns a negative, zero, or positive number depending on whether `lhs` is less
 // than, equal to, or greater than `rhs`. So, we can just subtract the two.

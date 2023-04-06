@@ -29,7 +29,7 @@ void dump_value(FILE *out, value val) {
 		break;
 
 	case VALUE_KIND_NUMBER:
-		fprintf(out, "Number(%lld)", as_number(val));
+		fprintf(out, "Number(%"NUMBER_PR")", as_number(val));
 		break;
 	}
 }
@@ -102,8 +102,12 @@ void index_assign_value(value ary, value idx, value val) {
 	if (!is_number(idx))
 		die_with_stacktrace("you must index with numbers, not %s", value_name(idx));
 
-	if (!index_assign_array(as_array(ary), as_number(idx), val))
-		die_with_stacktrace("cannot assign to negative indices larger than `ary`'s length: %lld", as_number(idx));
+	if (!index_assign_array(as_array(ary), as_number(idx), val)) {
+		die_with_stacktrace(
+			"cannot assign to negative indices larger than `ary`'s length: %"NUMBER_PR,
+			as_number(idx)
+		);
+	}
 }
 
 value index_value(value val, value idx) {
@@ -116,8 +120,13 @@ value index_value(value val, value idx) {
 	case VALUE_KIND_STRING: {
 		string *str = index_string(as_string(val), num_idx);
 
-		if (str == NULL)
-			die_with_stacktrace("index %lld out of bounds for string of length %u", num_idx, as_string(val)->length);
+		if (str == NULL) {
+			die_with_stacktrace(
+				"index %"NUMBER_PR" out of bounds for string of length %u",
+				num_idx,
+				as_string(val)->length
+			);
+		}
 
 		return new_string_value(str);
 	}
@@ -125,8 +134,13 @@ value index_value(value val, value idx) {
 	case VALUE_KIND_ARRAY: {
 		value ret = index_array(as_array(val), num_idx);
 
-		if (ret == VALUE_UNDEFINED)
-			die_with_stacktrace("index %lld out of bounds for array of length %u", num_idx, as_array(val)->length);
+		if (ret == VALUE_UNDEFINED) {
+			die_with_stacktrace(
+				"index %"NUMBER_PR" out of bounds for array of length %u",
+				num_idx,
+				as_array(val)->length
+			);
+		}
 
 		return ret;
 	}
@@ -233,14 +247,22 @@ value multiply_values(value lhs, value rhs) {
 		return new_number_value(as_number(lhs) * amnt);
 
 	case VALUE_KIND_STRING:
-		if (amnt < 0)
-			die_with_stacktrace("can only multiply strings by nonnegative integers (%lld invalid).", amnt);
+		if (amnt < 0) {
+			die_with_stacktrace(
+				"can only multiply strings by nonnegative integers (%"NUMBER_PR" invalid)",
+				amnt
+			);
+		}
 
 		return new_string_value(replicate_string(as_string(lhs), amnt));
 
 	case VALUE_KIND_ARRAY:
-		if (amnt < 0)
-			die_with_stacktrace("can only multiply arrays by nonnegative integers (%lld invalid).", amnt);
+		if (amnt < 0) {
+			die_with_stacktrace(
+				"can only multiply arrays by nonnegative integers (%"NUMBER_PR" invalid)",
+				amnt
+			);
+		}
 
 		return new_array_value(replicate_array(as_array(lhs), amnt));
 

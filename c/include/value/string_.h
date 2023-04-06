@@ -1,5 +1,6 @@
 #pragma once
-// this is named `string_.h` instead of `string.h`, as `string.h` would conflict with the stdlib.
+// this is named `string_.h` instead of `string.h`, as `string.h` conflicts with the standard
+// library's definitions (and actually is UB). Yay C.
 
 #include <string.h>
 #include <assert.h>

@@ -107,9 +107,26 @@ static ast_primary *parse_primary(tokenizer *tzr) {
 		primary->variable.name = tkn.identifier;
 		break;
 
-	case TOKEN_KIND_LITERAL:
+	case TOKEN_KIND_TRUE:
 		primary->kind = AST_PRIMARY_LITERAL;
-		primary->literal.val = tkn.val;
+		primary->literal.val = VALUE_TRUE;
+		break;
+	case TOKEN_KIND_FALSE:
+		primary->kind = AST_PRIMARY_LITERAL;
+		primary->literal.val = VALUE_FALSE;
+		break;
+	case TOKEN_KIND_NULL:
+		primary->kind = AST_PRIMARY_LITERAL;
+		primary->literal.val = VALUE_NULL;
+		break;
+	case TOKEN_KIND_NUMBER:
+		primary->kind = AST_PRIMARY_LITERAL;
+		primary->literal.val = new_number_value(tkn.num);
+		break;
+
+	case TOKEN_KIND_STRING:
+		primary->kind = AST_PRIMARY_LITERAL;
+		primary->literal.val = new_string_value(tkn.str);
 		break;
 
 	default:
@@ -457,7 +474,7 @@ ast_declaration *next_declaration(tokenizer *tzr) {
 		declaration->kind = AST_DECLARATION_IMPORT;
 
 		token path_token = advance(tzr);
-		if (path_token.kind != TOKEN_KIND_LITERAL || !is_string(path_token.val))
+		if (path_token.kind != TOKEN_KIND_STRING)
 			parse_error(tzr, "`import` only takes strings");
 		if (!guard(tzr, TOKEN_KIND_SEMICOLON))
 			parse_error(tzr, "expected `;` after `import` declaration");
@@ -465,7 +482,7 @@ ast_declaration *next_declaration(tokenizer *tzr) {
 
 		// `read_file` expects a nul terminated string, but `string`s are not nul terminated.
 		// So we have to make one.
-		string *path_string = as_string(path_token.val);
+		string *path_string = path_token.str;
 		declaration->import.path = new_cstr_from_string(path_string);
 		free_string(path_string);
 

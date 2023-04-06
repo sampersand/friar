@@ -1,14 +1,20 @@
 #pragma once
 #include <stdio.h>
 #include "value/defn.h"
+#include "value/number.h"
+#include "value/string_.h"
 
 typedef enum {
 	// Indicates that the token isn't actually a token.
 	// This is used for things like marking the end of a stream.
 	TOKEN_KIND_UNDEFINED,
 
-	// These two make use of the `union` within the `token`.
-	TOKEN_KIND_LITERAL, TOKEN_KIND_IDENTIFIER,
+
+	// Literal values within source code.
+	TOKEN_KIND_TRUE, TOKEN_KIND_FALSE, TOKEN_KIND_NULL, 
+
+	// These make use of the `union` within the `token`.
+	TOKEN_KIND_NUMBER ,TOKEN_KIND_STRING, TOKEN_KIND_IDENTIFIER,
 
 	// Keywords
 	TOKEN_KIND_IMPORT,
@@ -42,10 +48,14 @@ typedef enum {
 	TOKEN_KIND_GREATER_THAN, TOKEN_KIND_GREATER_THAN_OR_EQUAL,
 } token_kind;
 
+/** A source code token.
+ * There are few different standard ways of representing tokens in language design. The simplest is
+ */
 typedef struct {
 	token_kind kind;
 	union {
-		value val;
+		number num;
+		string *str;
 		char *identifier;
 	};
 } token;
