@@ -1,4 +1,4 @@
-#include "bytecode.h"
+#include "vm/bytecode.h"
 
 const char *opcode_repr(opcode op) {
 	switch (op) {

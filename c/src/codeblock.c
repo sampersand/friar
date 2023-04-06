@@ -1,5 +1,5 @@
-#include "codeblock.h"
-#include "globals.h"
+#include "vm/codeblock.h"
+#include "vm/globals.h"
 #include "shared.h"
 #include "value/value.h"
 

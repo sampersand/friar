@@ -1,4 +1,4 @@
-#include "environment.h"
+#include "vm/environment.h"
 #include "shared.h"
 #include <string.h>
 #include <stdlib.h>

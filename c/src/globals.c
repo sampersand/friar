@@ -1,7 +1,7 @@
-#include "globals.h"
+#include "vm/globals.h"
 #include "shared.h"
 #include "value/value.h"
-#include "builtin_function.h"
+#include "vm/builtin_function.h"
 
 typedef struct {
 	char *name;

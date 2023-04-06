@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include "value/defn.h"
-#include "codeblock.h"
+#include "vm/codeblock.h"
 #include <stdalign.h>
 #include <stdio.h>
 

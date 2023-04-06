@@ -1,11 +1,11 @@
-#include "compile.h"
-#include "bytecode.h"
-#include "codeblock.h"
+#include "vm/compile.h"
+#include "vm/bytecode.h"
+#include "vm/codeblock.h"
 #include "shared.h"
-#include "function.h"
+#include "value/function.h"
 #include "value/value.h"
 #include "parser/ast.h"
-#include "globals.h"
+#include "vm/globals.h"
 #include <stdlib.h>
 #include <string.h>
 

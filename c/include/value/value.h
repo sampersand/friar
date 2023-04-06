@@ -1,4 +1,4 @@
-#pragma once
+	#pragma once
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -9,8 +9,8 @@
 #include "value/string_.h"
 #include "value/array.h"
 #include "value/number.h"
-#include "function.h"
-#include "builtin_function.h"
+#include "value/function.h"
+#include "vm/builtin_function.h"
 
 #define VALUE_FALSE 0
 #define VALUE_NULL 1

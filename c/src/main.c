@@ -1,8 +1,8 @@
 #include "value/value.h"
-#include "compile.h"
-#include "codeblock.h"
-#include "environment.h"
-#include "globals.h"
+#include "vm/compile.h"
+#include "vm/codeblock.h"
+#include "vm/environment.h"
+#include "vm/globals.h"
 
 static void usage(const char *program_name) {
 	die("usage: %s (-e 'expression' | -f filename)", program_name);

@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "environment.h"
-
+#include "vm/environment.h"
 #define die(...) (fprintf(stderr, __VA_ARGS__), fputs("\n", stderr), exit(1))
 #define bug(...) (fprintf(stderr, "%s:%d [bug] ", __FILE__, __LINE__), die(__VA_ARGS__))
 
